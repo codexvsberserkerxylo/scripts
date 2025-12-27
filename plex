@@ -1,0 +1,843 @@
+local G2L = {};
+
+-- StarterGui.pelx.1
+G2L["1"] = Instance.new("ScreenGui", game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui"));
+G2L["1"]["IgnoreGuiInset"] = true;
+G2L["1"]["ScreenInsets"] = Enum.ScreenInsets.DeviceSafeInsets;
+G2L["1"]["Name"] = [[pelx.1]];
+G2L["1"]["ZIndexBehavior"] = Enum.ZIndexBehavior.Sibling;
+G2L["1"]["ResetOnSpawn"] = false;
+
+
+-- StarterGui.pelx.1.main
+G2L["2"] = Instance.new("Frame", G2L["1"]);
+G2L["2"]["ZIndex"] = 250;
+G2L["2"]["BorderSizePixel"] = 0;
+G2L["2"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["2"]["Size"] = UDim2.new(1, 0, 1, 0);
+G2L["2"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["2"]["Name"] = [[main]];
+G2L["2"]["BackgroundTransparency"] = 1;
+
+
+-- StarterGui.pelx.1.main.explorer
+G2L["3"] = Instance.new("Frame", G2L["2"]);
+G2L["3"]["BorderSizePixel"] = 0;
+G2L["3"]["BackgroundColor3"] = Color3.fromRGB(46, 46, 46);
+G2L["3"]["Size"] = UDim2.new(0.13986, 0, 0.49398, 0);
+G2L["3"]["Position"] = UDim2.new(0.85987, 0, -0.00241, 0);
+G2L["3"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["3"]["Name"] = [[explorer]];
+
+
+-- StarterGui.pelx.1.main.explorer.treeview
+G2L["4"] = Instance.new("ScrollingFrame", G2L["3"]);
+G2L["4"]["Active"] = true;
+G2L["4"]["BorderSizePixel"] = 0;
+G2L["4"]["Name"] = [[treeview]];
+G2L["4"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["4"]["Size"] = UDim2.new(1.00279, 0, 0.90244, 0);
+G2L["4"]["ScrollBarImageColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["4"]["Position"] = UDim2.new(-0, 0, 0.08049, 0);
+G2L["4"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["4"]["ScrollBarThickness"] = 0;
+G2L["4"]["BackgroundTransparency"] = 1;
+
+
+-- StarterGui.pelx.1.main.explorer.search
+G2L["5"] = Instance.new("TextBox", G2L["3"]);
+G2L["5"]["CursorPosition"] = -1;
+G2L["5"]["Name"] = [[search]];
+G2L["5"]["BorderSizePixel"] = 0;
+G2L["5"]["TextWrapped"] = true;
+G2L["5"]["TextSize"] = 14;
+G2L["5"]["TextColor3"] = Color3.fromRGB(151, 151, 151);
+G2L["5"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["5"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["5"]["PlaceholderText"] = [[Search..]];
+G2L["5"]["Size"] = UDim2.new(0.82645, 0, 0.07561, 0);
+G2L["5"]["Position"] = UDim2.new(0, 0, 0.00488, 0);
+G2L["5"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["5"]["Text"] = [[]];
+G2L["5"]["BackgroundTransparency"] = 0.99;
+
+
+-- StarterGui.pelx.1.main.explorer.refresh
+G2L["6"] = Instance.new("TextButton", G2L["3"]);
+G2L["6"]["BorderSizePixel"] = 0;
+G2L["6"]["TextSize"] = 14;
+G2L["6"]["TextColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["6"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["6"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["6"]["BackgroundTransparency"] = 0.99;
+G2L["6"]["Size"] = UDim2.new(0.17355, 0, 0.07561, 0);
+G2L["6"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["6"]["Text"] = [[R]];
+G2L["6"]["Name"] = [[refresh]];
+G2L["6"]["Position"] = UDim2.new(0.82645, 0, 0.00488, 0);
+
+
+-- StarterGui.pelx.1.main.settingsbtn
+G2L["7"] = Instance.new("TextButton", G2L["2"]);
+G2L["7"]["BorderSizePixel"] = 0;
+G2L["7"]["TextSize"] = 16;
+G2L["7"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["7"]["BackgroundColor3"] = Color3.fromRGB(46, 46, 46);
+G2L["7"]["FontFace"] = Font.new([[rbxasset://fonts/families/Arial.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["7"]["Size"] = UDim2.new(0.04865, 0, 0.06024, 0);
+G2L["7"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["7"]["Text"] = [[Pelx]];
+G2L["7"]["Name"] = [[settingsbtn]];
+G2L["7"]["Position"] = UDim2.new(0.47562, 0, 0.01928, 0);
+
+
+-- StarterGui.pelx.1.main.settingsbtn.c
+G2L["8"] = Instance.new("UICorner", G2L["7"]);
+G2L["8"]["Name"] = [[c]];
+G2L["8"]["CornerRadius"] = UDim.new(0, 4);
+
+
+-- StarterGui.pelx.1.main.settingsbtn.s
+G2L["9"] = Instance.new("UIStroke", G2L["7"]);
+G2L["9"]["Thickness"] = 1.5;
+G2L["9"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["9"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["9"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.settingsbtn.popup
+G2L["a"] = Instance.new("LocalScript", G2L["7"]);
+G2L["a"]["Name"] = [[popup]];
+
+
+-- StarterGui.pelx.1.main.popup
+G2L["b"] = Instance.new("Frame", G2L["2"]);
+G2L["b"]["Visible"] = false;
+G2L["b"]["BorderSizePixel"] = 0;
+G2L["b"]["BackgroundColor3"] = Color3.fromRGB(46, 46, 46);
+G2L["b"]["Size"] = UDim2.new(0.1, 0, 0.12771, 0);
+G2L["b"]["Position"] = UDim2.new(0.45, 0, 0.09398, 0);
+G2L["b"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["b"]["Name"] = [[popup]];
+
+
+-- StarterGui.pelx.1.main.popup.c
+G2L["c"] = Instance.new("UICorner", G2L["b"]);
+G2L["c"]["Name"] = [[c]];
+G2L["c"]["CornerRadius"] = UDim.new(0, 5);
+
+
+-- StarterGui.pelx.1.main.popup.expbtn
+G2L["d"] = Instance.new("TextButton", G2L["b"]);
+G2L["d"]["TextWrapped"] = true;
+G2L["d"]["BorderSizePixel"] = 0;
+G2L["d"]["TextSize"] = 12;
+G2L["d"]["TextColor3"] = Color3.fromRGB(140, 140, 140);
+G2L["d"]["BackgroundColor3"] = Color3.fromRGB(44, 44, 44);
+G2L["d"]["FontFace"] = Font.new([[rbxasset://fonts/families/Arial.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["d"]["Size"] = UDim2.new(0.35676, 0, 0.42837, 0);
+G2L["d"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["d"]["Text"] = [[Explorer]];
+G2L["d"]["Name"] = [[expbtn]];
+G2L["d"]["Position"] = UDim2.new(0.0946, 0, 0.10105, 0);
+
+
+-- StarterGui.pelx.1.main.popup.expbtn.c
+G2L["e"] = Instance.new("UICorner", G2L["d"]);
+G2L["e"]["Name"] = [[c]];
+G2L["e"]["CornerRadius"] = UDim.new(0, 4);
+
+
+-- StarterGui.pelx.1.main.popup.expbtn.s
+G2L["f"] = Instance.new("UIStroke", G2L["d"]);
+G2L["f"]["Thickness"] = 0.5;
+G2L["f"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["f"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["f"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.popup.prpbtn
+G2L["10"] = Instance.new("TextButton", G2L["b"]);
+G2L["10"]["TextWrapped"] = true;
+G2L["10"]["BorderSizePixel"] = 0;
+G2L["10"]["TextSize"] = 12;
+G2L["10"]["TextColor3"] = Color3.fromRGB(140, 140, 140);
+G2L["10"]["BackgroundColor3"] = Color3.fromRGB(44, 44, 44);
+G2L["10"]["FontFace"] = Font.new([[rbxasset://fonts/families/Arial.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["10"]["Size"] = UDim2.new(0.35676, 0, 0.42837, 0);
+G2L["10"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["10"]["Text"] = [[Properties]];
+G2L["10"]["Name"] = [[prpbtn]];
+G2L["10"]["Position"] = UDim2.new(0.56081, 0, 0.10105, 0);
+
+
+-- StarterGui.pelx.1.main.popup.prpbtn.c
+G2L["11"] = Instance.new("UICorner", G2L["10"]);
+G2L["11"]["Name"] = [[c]];
+G2L["11"]["CornerRadius"] = UDim.new(0, 4);
+
+
+-- StarterGui.pelx.1.main.popup.prpbtn.s
+G2L["12"] = Instance.new("UIStroke", G2L["10"]);
+G2L["12"]["Thickness"] = 0.5;
+G2L["12"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["12"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["12"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.popup.s
+G2L["13"] = Instance.new("UIStroke", G2L["b"]);
+G2L["13"]["Thickness"] = 1.5;
+G2L["13"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["13"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["13"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.popup.btnh
+G2L["14"] = Instance.new("LocalScript", G2L["b"]);
+G2L["14"]["Name"] = [[btnh]];
+
+
+-- StarterGui.pelx.1.main.popup.setbtn
+G2L["15"] = Instance.new("TextButton", G2L["b"]);
+G2L["15"]["TextWrapped"] = true;
+G2L["15"]["BorderSizePixel"] = 0;
+G2L["15"]["TextSize"] = 12;
+G2L["15"]["TextColor3"] = Color3.fromRGB(140, 140, 140);
+G2L["15"]["BackgroundColor3"] = Color3.fromRGB(44, 44, 44);
+G2L["15"]["FontFace"] = Font.new([[rbxasset://fonts/families/Arial.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["15"]["Size"] = UDim2.new(0.82297, 0, 0.29629, 0);
+G2L["15"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["15"]["Text"] = [[Settings]];
+G2L["15"]["Name"] = [[setbtn]];
+G2L["15"]["Position"] = UDim2.new(0.0946, 0, 0.62935, 0);
+
+
+-- StarterGui.pelx.1.main.popup.setbtn.c
+G2L["16"] = Instance.new("UICorner", G2L["15"]);
+G2L["16"]["Name"] = [[c]];
+G2L["16"]["CornerRadius"] = UDim.new(0, 4);
+
+
+-- StarterGui.pelx.1.main.popup.setbtn.s
+G2L["17"] = Instance.new("UIStroke", G2L["15"]);
+G2L["17"]["Thickness"] = 0.5;
+G2L["17"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["17"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["17"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.popup.setbtn.k
+G2L["18"] = Instance.new("LocalScript", G2L["15"]);
+G2L["18"]["Name"] = [[k]];
+
+
+-- StarterGui.pelx.1.main.view
+G2L["19"] = Instance.new("Frame", G2L["2"]);
+G2L["19"]["Visible"] = false;
+G2L["19"]["BorderSizePixel"] = 0;
+G2L["19"]["BackgroundColor3"] = Color3.fromRGB(46, 46, 46);
+G2L["19"]["Size"] = UDim2.new(0.26486, 0, 0.31446, 0);
+G2L["19"]["Position"] = UDim2.new(0.36757, 0, 0.34217, 0);
+G2L["19"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["19"]["Name"] = [[view]];
+
+
+-- StarterGui.pelx.1.main.view.c
+G2L["1a"] = Instance.new("UICorner", G2L["19"]);
+G2L["1a"]["Name"] = [[c]];
+G2L["1a"]["CornerRadius"] = UDim.new(0, 3);
+
+
+-- StarterGui.pelx.1.main.view.s
+G2L["1b"] = Instance.new("UIStroke", G2L["19"]);
+G2L["1b"]["Thickness"] = 1.5;
+G2L["1b"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["1b"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["1b"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.view.scroll
+G2L["1c"] = Instance.new("ScrollingFrame", G2L["19"]);
+G2L["1c"]["Active"] = true;
+G2L["1c"]["BorderSizePixel"] = 0;
+G2L["1c"]["Name"] = [[scroll]];
+G2L["1c"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["1c"]["Size"] = UDim2.new(0.99745, 0, 0.91571, 0);
+G2L["1c"]["ScrollBarImageColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["1c"]["Position"] = UDim2.new(-0, 0, 0.08429, 0);
+G2L["1c"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["1c"]["ScrollBarThickness"] = 0;
+G2L["1c"]["BackgroundTransparency"] = 1;
+
+
+-- StarterGui.pelx.1.main.view.scroll.display
+G2L["1d"] = Instance.new("TextBox", G2L["1c"]);
+G2L["1d"]["CursorPosition"] = -1;
+G2L["1d"]["Name"] = [[display]];
+G2L["1d"]["TextXAlignment"] = Enum.TextXAlignment.Left;
+G2L["1d"]["PlaceholderColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["1d"]["BorderSizePixel"] = 0;
+G2L["1d"]["TextSize"] = 13;
+G2L["1d"]["TextColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["1d"]["TextYAlignment"] = Enum.TextYAlignment.Top;
+G2L["1d"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["1d"]["RichText"] = true;
+G2L["1d"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["1d"]["MultiLine"] = true;
+G2L["1d"]["ClearTextOnFocus"] = false;
+G2L["1d"]["Size"] = UDim2.new(0, 378, 0, 226);
+G2L["1d"]["Position"] = UDim2.new(0.0179, 0, 0.01149, 0);
+G2L["1d"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["1d"]["Text"] = [[]];
+G2L["1d"]["BackgroundTransparency"] = 1;
+
+
+-- StarterGui.pelx.1.main.view.title
+G2L["1e"] = Instance.new("TextLabel", G2L["19"]);
+G2L["1e"]["TextWrapped"] = true;
+G2L["1e"]["BorderSizePixel"] = 0;
+G2L["1e"]["TextSize"] = 14;
+G2L["1e"]["TextScaled"] = true;
+G2L["1e"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["1e"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["1e"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["1e"]["BackgroundTransparency"] = 0.99;
+G2L["1e"]["Size"] = UDim2.new(0.3551, 0, 0.08429, 0);
+G2L["1e"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["1e"]["Text"] = [[Title]];
+G2L["1e"]["Name"] = [[title]];
+G2L["1e"]["Position"] = UDim2.new(-0, 0, 0, 0);
+
+
+-- StarterGui.pelx.1.main.view.copy
+G2L["1f"] = Instance.new("TextButton", G2L["19"]);
+G2L["1f"]["BorderSizePixel"] = 0;
+G2L["1f"]["TextSize"] = 14;
+G2L["1f"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["1f"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["1f"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["1f"]["BackgroundTransparency"] = 0.99;
+G2L["1f"]["Size"] = UDim2.new(0.23702, 0, 0.08429, 0);
+G2L["1f"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["1f"]["Text"] = [[Copy]];
+G2L["1f"]["Name"] = [[copy]];
+G2L["1f"]["Position"] = UDim2.new(0.35459, 0, 0, 0);
+
+
+-- StarterGui.pelx.1.main.view.exit
+G2L["20"] = Instance.new("TextButton", G2L["19"]);
+G2L["20"]["BorderSizePixel"] = 0;
+G2L["20"]["TextSize"] = 14;
+G2L["20"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["20"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["20"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["20"]["BackgroundTransparency"] = 0.99;
+G2L["20"]["Size"] = UDim2.new(0.17908, 0, 0.08429, 0);
+G2L["20"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["20"]["Text"] = [[Exit]];
+G2L["20"]["Name"] = [[exit]];
+G2L["20"]["Position"] = UDim2.new(0.81888, 0, 0, 0);
+
+
+-- StarterGui.pelx.1.main.view.save
+G2L["21"] = Instance.new("TextButton", G2L["19"]);
+G2L["21"]["BorderSizePixel"] = 0;
+G2L["21"]["TextSize"] = 14;
+G2L["21"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["21"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["21"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["21"]["BackgroundTransparency"] = 0.99;
+G2L["21"]["Size"] = UDim2.new(0.22727, 0, 0.08429, 0);
+G2L["21"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["21"]["Text"] = [[Save to File]];
+G2L["21"]["Name"] = [[save]];
+G2L["21"]["Position"] = UDim2.new(0.59161, 0, 0, 0);
+
+
+-- StarterGui.pelx.1.main.settingsf
+G2L["22"] = Instance.new("Frame", G2L["2"]);
+G2L["22"]["Visible"] = false;
+G2L["22"]["BorderSizePixel"] = 0;
+G2L["22"]["BackgroundColor3"] = Color3.fromRGB(46, 46, 46);
+G2L["22"]["Size"] = UDim2.new(0.27838, 0, 0.18313, 0);
+G2L["22"]["Position"] = UDim2.new(0.36014, 0, 0.33218, 0);
+G2L["22"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["22"]["Name"] = [[settingsf]];
+
+
+-- StarterGui.pelx.1.main.settingsf.c
+G2L["23"] = Instance.new("UICorner", G2L["22"]);
+G2L["23"]["Name"] = [[c]];
+G2L["23"]["CornerRadius"] = UDim.new(0, 3);
+
+
+-- StarterGui.pelx.1.main.settingsf.s
+G2L["24"] = Instance.new("UIStroke", G2L["22"]);
+G2L["24"]["Thickness"] = 1.5;
+G2L["24"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["24"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["24"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.settingsf.decompiler
+G2L["25"] = Instance.new("TextButton", G2L["22"]);
+G2L["25"]["BorderSizePixel"] = 0;
+G2L["25"]["TextSize"] = 14;
+G2L["25"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["25"]["BackgroundColor3"] = Color3.fromRGB(55, 55, 55);
+G2L["25"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["25"]["Size"] = UDim2.new(0.4124, 0, 0.32282, 0);
+G2L["25"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["25"]["Text"] = [[Hybrid]];
+G2L["25"]["Name"] = [[decompiler]];
+G2L["25"]["Position"] = UDim2.new(0.03883, 0, 0.09787, 0);
+
+
+-- StarterGui.pelx.1.main.settingsf.decompiler.c
+G2L["26"] = Instance.new("UICorner", G2L["25"]);
+G2L["26"]["Name"] = [[c]];
+
+
+-- StarterGui.pelx.1.main.settingsf.decompiler.s
+G2L["27"] = Instance.new("UIStroke", G2L["25"]);
+G2L["27"]["Thickness"] = 0.5;
+G2L["27"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["27"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["27"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.settingsf.decompiler.mode
+G2L["28"] = Instance.new("TextLabel", G2L["25"]);
+G2L["28"]["BorderSizePixel"] = 0;
+G2L["28"]["TextSize"] = 14;
+G2L["28"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["28"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["28"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["28"]["BackgroundTransparency"] = 1;
+G2L["28"]["RichText"] = true;
+G2L["28"]["Size"] = UDim2.new(0, 169, 0, 12);
+G2L["28"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["28"]["Text"] = [[Mode]];
+G2L["28"]["Name"] = [[mode]];
+G2L["28"]["Position"] = UDim2.new(0, 0, -0.30569, 0);
+
+
+-- StarterGui.pelx.1.main.settingsf.primaryde
+G2L["29"] = Instance.new("TextButton", G2L["22"]);
+G2L["29"]["BorderSizePixel"] = 0;
+G2L["29"]["TextSize"] = 14;
+G2L["29"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["29"]["BackgroundColor3"] = Color3.fromRGB(55, 55, 55);
+G2L["29"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["29"]["Size"] = UDim2.new(0.4124, 0, 0.32282, 0);
+G2L["29"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["29"]["Text"] = [[Unluau]];
+G2L["29"]["Name"] = [[primaryde]];
+G2L["29"]["Position"] = UDim2.new(0.54612, 0, 0.10445, 0);
+
+
+-- StarterGui.pelx.1.main.settingsf.primaryde.c
+G2L["2a"] = Instance.new("UICorner", G2L["29"]);
+G2L["2a"]["Name"] = [[c]];
+
+
+-- StarterGui.pelx.1.main.settingsf.primaryde.s
+G2L["2b"] = Instance.new("UIStroke", G2L["29"]);
+G2L["2b"]["Thickness"] = 0.5;
+G2L["2b"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["2b"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["2b"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.settingsf.primaryde.primary
+G2L["2c"] = Instance.new("TextLabel", G2L["29"]);
+G2L["2c"]["BorderSizePixel"] = 0;
+G2L["2c"]["TextSize"] = 14;
+G2L["2c"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["2c"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["2c"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["2c"]["BackgroundTransparency"] = 1;
+G2L["2c"]["RichText"] = true;
+G2L["2c"]["Size"] = UDim2.new(0, 169, 0, 12);
+G2L["2c"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["2c"]["Text"] = [[Primary Decompiler]];
+G2L["2c"]["Name"] = [[primary]];
+G2L["2c"]["Position"] = UDim2.new(0, 0, -0.30569, 0);
+
+
+-- StarterGui.pelx.1.main.settingsf.secondaryde
+G2L["2d"] = Instance.new("TextButton", G2L["22"]);
+G2L["2d"]["BorderSizePixel"] = 0;
+G2L["2d"]["TextSize"] = 14;
+G2L["2d"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["2d"]["BackgroundColor3"] = Color3.fromRGB(55, 55, 55);
+G2L["2d"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["2d"]["Size"] = UDim2.new(0.91969, 0, 0.32282, 0);
+G2L["2d"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["2d"]["Text"] = [[BetterDecompiler]];
+G2L["2d"]["Name"] = [[secondaryde]];
+G2L["2d"]["Position"] = UDim2.new(0.03883, 0, 0.6093, 0);
+
+
+-- StarterGui.pelx.1.main.settingsf.secondaryde.c
+G2L["2e"] = Instance.new("UICorner", G2L["2d"]);
+G2L["2e"]["Name"] = [[c]];
+
+
+-- StarterGui.pelx.1.main.settingsf.secondaryde.s
+G2L["2f"] = Instance.new("UIStroke", G2L["2d"]);
+G2L["2f"]["Thickness"] = 0.5;
+G2L["2f"]["Color"] = Color3.fromRGB(255, 158, 20);
+G2L["2f"]["ApplyStrokeMode"] = Enum.ApplyStrokeMode.Border;
+G2L["2f"]["Name"] = [[s]];
+
+
+-- StarterGui.pelx.1.main.settingsf.secondaryde.secondary
+G2L["30"] = Instance.new("TextLabel", G2L["2d"]);
+G2L["30"]["BorderSizePixel"] = 0;
+G2L["30"]["TextSize"] = 14;
+G2L["30"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["30"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["30"]["TextColor3"] = Color3.fromRGB(221, 221, 221);
+G2L["30"]["BackgroundTransparency"] = 1;
+G2L["30"]["RichText"] = true;
+G2L["30"]["Size"] = UDim2.new(0, 378, 0, 12);
+G2L["30"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["30"]["Text"] = [[Secondary Decompiler]];
+G2L["30"]["Name"] = [[secondary]];
+G2L["30"]["Position"] = UDim2.new(0, 0, -0.30569, 0);
+
+
+-- StarterGui.pelx.1.main.properties
+G2L["31"] = Instance.new("Frame", G2L["2"]);
+G2L["31"]["BorderSizePixel"] = 0;
+G2L["31"]["BackgroundColor3"] = Color3.fromRGB(46, 46, 46);
+G2L["31"]["Size"] = UDim2.new(0.13986, 0, 0.5012, 0);
+G2L["31"]["Position"] = UDim2.new(0.85987, 0, 0.4988, 0);
+G2L["31"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["31"]["Name"] = [[properties]];
+
+
+-- StarterGui.pelx.1.main.properties.instance
+G2L["32"] = Instance.new("TextLabel", G2L["31"]);
+G2L["32"]["TextWrapped"] = true;
+G2L["32"]["BorderSizePixel"] = 0;
+G2L["32"]["TextSize"] = 14;
+G2L["32"]["TextScaled"] = true;
+G2L["32"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["32"]["FontFace"] = Font.new([[rbxasset://fonts/families/SourceSansPro.json]], Enum.FontWeight.Regular, Enum.FontStyle.Normal);
+G2L["32"]["TextColor3"] = Color3.fromRGB(151, 151, 151);
+G2L["32"]["BackgroundTransparency"] = 0.99;
+G2L["32"]["Size"] = UDim2.new(-0.96995, 0, 0.1, 0);
+G2L["32"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["32"]["Text"] = [[ ]];
+G2L["32"]["Name"] = [[instance]];
+G2L["32"]["Position"] = UDim2.new(0.97924, 0, 0, 0);
+
+
+-- StarterGui.pelx.1.main.properties.prpview
+G2L["33"] = Instance.new("ScrollingFrame", G2L["31"]);
+G2L["33"]["Active"] = true;
+G2L["33"]["BorderSizePixel"] = 0;
+G2L["33"]["Name"] = [[prpview]];
+G2L["33"]["BackgroundColor3"] = Color3.fromRGB(255, 255, 255);
+G2L["33"]["Size"] = UDim2.new(0.99305, 0, 0.90144, 0);
+G2L["33"]["ScrollBarImageColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["33"]["Position"] = UDim2.new(0.00695, 0, 0.09856, 0);
+G2L["33"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["33"]["ScrollBarThickness"] = 0;
+G2L["33"]["BackgroundTransparency"] = 1;
+
+
+-- StarterGui.pelx.1.main.properties.b
+G2L["34"] = Instance.new("Frame", G2L["31"]);
+G2L["34"]["BorderSizePixel"] = 0;
+G2L["34"]["BackgroundColor3"] = Color3.fromRGB(39, 39, 39);
+G2L["34"]["Size"] = UDim2.new(1.00279, 0, -0.01442, 0);
+G2L["34"]["Position"] = UDim2.new(0, 0, 0, 0);
+G2L["34"]["BorderColor3"] = Color3.fromRGB(0, 0, 0);
+G2L["34"]["Name"] = [[b]];
+
+
+-- StarterGui.pelx.1.mainscr
+G2L["35"] = Instance.new("LocalScript", G2L["1"]);
+G2L["35"]["Name"] = [[mainscr]];
+
+
+-- StarterGui.pelx.1.main.settingsbtn.popup
+local function C_a()
+local script = G2L["a"];
+	local popup = script.Parent.Parent.popup
+	script.Parent.MouseButton1Click:Connect(function()
+		popup.Visible = not popup.Visible
+	end)
+end;
+task.spawn(C_a);
+-- StarterGui.pelx.1.main.popup.btnh
+local function C_14()
+local script = G2L["14"];
+	local p = script.Parent
+	local expbtn = p.expbtn
+	local prpbtn = p.prpbtn
+	local prp = p.Parent.properties
+	local exp = p.Parent.explorer
+	expbtn.MouseButton1Click:Connect(function()
+		exp.Visible = not exp.Visible
+	end)
+	prpbtn.MouseButton1Click:Connect(function()
+		prp.Visible = not prp.Visible
+	end)
+	
+end;
+task.spawn(C_14);
+-- StarterGui.pelx.1.main.popup.setbtn.k
+local function C_18()
+local script = G2L["18"];
+	local button = script.Parent
+	local settingsFrame = button.Parent.Parent.Parent:WaitForChild("settingsf")
+	
+	button.MouseButton1Click:Connect(function()
+		settingsFrame.Visible = not settingsFrame.Visible
+	end)
+end;
+task.spawn(C_18);
+-- StarterGui.pelx.1.mainscr
+local function C_35()
+local script = G2L["35"];
+	local dex = {}
+	
+	dex.config = {
+		mode = "hybrid",
+		primaryDecompiler = "unluau",
+		secondaryDecompiler = "betterdecompiler",
+		currentScript = nil,
+		currentInstance = nil,
+		scriptCache = {},
+		expandedNodes = {}
+	}
+	
+	local classIcons = {
+		["Workspace"] = 19, ["Players"] = 21, ["Lighting"] = 22, ["MaterialService"] = 77,
+		["ReplicatedFirst"] = 72, ["ReplicatedStorage"] = 73, ["ServerScriptService"] = 0,
+		["ServerStorage"] = 0, ["StarterGui"] = 46, ["StarterPack"] = 20, ["StarterPlayer"] = 88,
+		["Teams"] = 24, ["SoundService"] = 32, ["LocalScript"] = 18, ["Script"] = 6,
+		["ModuleScript"] = 71, ["Part"] = 1, ["MeshPart"] = 60, ["UnionOperation"] = 74,
+		["Model"] = 2, ["Folder"] = 79, ["ScreenGui"] = 47, ["Frame"] = 48, ["Default"] = 0
+	}
+	
+	local allProps = {
+		"Name", "ClassName", "Parent", "Archivable", "Transparency", "Reflectance", "Color", 
+		"Position", "Rotation", "Size", "Anchored", "CanCollide", "CanTouch", "Shape", 
+		"Material", "Locked", "CastShadow", "Text", "TextColor3", "TextSize", "Font", 
+		"Visible", "Enabled", "ZIndex", "Image", "Texture", "SoundId", "Volume", 
+		"PlaybackSpeed", "Playing", "Looped", "Brightness", "Range", "Shadows", 
+		"FieldOfView", "WalkSpeed", "JumpPower", "Health", "MaxHealth", "TeamColor"
+	}
+	
+	dex.decompilers = {
+		unluau = function(script) return decompile and decompile(script, "unluau") or "-- Error" end,
+		medal = function(script) return decompile and decompile(script) or "-- Error" end,
+		konstant = function(script) return (Konstant and Konstant.decompile) and Konstant.decompile(script) or "-- Error" end,
+		betterdecompiler = function(script) return (syn and syn.decompile) and syn.decompile(script) or "-- Error" end
+	}
+	
+	-- FIX: Reliable way to get clean text for Copy/Save
+	function dex.stripTags(txt)
+		return txt:gsub("<[^>]*>", ""):gsub("&lt;", "<"):gsub("&gt;", ">")
+	end
+	
+	-- FIX: Highlighting that doesn't break itself
+	function dex.highlight(code)
+		local colors = {
+			kw = "#ff7b72", g = "#d2a8ff", s = "#a5d6ff", 
+			n = "#f0883e", op = "#79c0ff", comment = "#8b949e"
+		}
+	
+		-- Escape XML first
+		local clean = code:gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;")
+	
+		-- We apply highlighting to the code BEFORE adding the <font> tags to avoid double-tagging
+		local function color(text, color)
+			return string.format('<font color="%s">%s</font>', color, text)
+		end
+	
+		-- 1. Comments (do first)
+		clean = clean:gsub("%%%-%%%-.*", function(c) return color(c, colors.comment) end)
+	
+		-- 2. Strings
+		clean = clean:gsub('"[^"]*"', function(s) return color(s, colors.s) end)
+		clean = clean:gsub("'[^']*'", function(s) return color(s, colors.s) end)
+	
+		-- 3. Keywords (with boundaries)
+		local kws = {"local", "function", "return", "if", "then", "else", "elseif", "end", "for", "in", "do", "while", "nil", "true", "false", "and", "or", "not", "repeat", "until", "break"}
+		for _, w in ipairs(kws) do
+			clean = clean:gsub("%f[%w]"..w.."%f[^%w]", function(word)
+				return color(word, colors.kw)
+			end)
+		end
+	
+		-- 4. Numbers
+		clean = clean:gsub("%f[%d]%d+%.?%d*%f[%D]", function(n) return color(n, colors.n) end)
+	
+		-- 5. Globals
+		local globs = {"game", "workspace", "script", "math", "table", "string", "task", "wait", "print", "warn", "error", "Enum", "Instance", "Vector3", "CFrame", "Color3"}
+		for _, g in ipairs(globs) do
+			clean = clean:gsub("%f[%w]"..g.."%f[^%w]", function(word)
+				return color(word, colors.g)
+			end)
+		end
+	
+		return clean
+	end
+	
+	local Players = game:GetService("Players")
+	local LocalPlayer = Players.LocalPlayer
+	local ScreenGui = LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("pelx.1")
+	local main = ScreenGui:WaitForChild("main")
+	local explorerFrame = main:WaitForChild("explorer")
+	local propertiesFrame = main:WaitForChild("properties")
+	local viewFrame = main:WaitForChild("view")
+	local settingsFrame = main:WaitForChild("settingsf")
+	local popupFrame = main:WaitForChild("popup")
+	
+	local gui = {
+		mainframe = main,
+		explorerframe = explorerFrame,
+		scriptviewerframe = viewFrame,
+		settingsframe = settingsFrame,
+		propertiespanel = propertiesFrame,
+		treeview = explorerFrame:WaitForChild("treeview"),
+		searchtextbox = explorerFrame:WaitForChild("search"),
+		refreshbutton = explorerFrame:WaitForChild("refresh"),
+		propertiesview = propertiesFrame:WaitForChild("prpview"),
+		instancenamelabel = propertiesFrame:WaitForChild("instance"),
+		scriptscroll = viewFrame:WaitForChild("scroll"),
+		scriptdisplay = viewFrame:WaitForChild("scroll"):WaitForChild("display"),
+		scripttitle = viewFrame:WaitForChild("title"),
+		copybutton = viewFrame:WaitForChild("copy"),
+		savebutton = viewFrame:WaitForChild("save"),
+		backbutton = viewFrame:WaitForChild("exit"),
+		settingsbutton = popupFrame:WaitForChild("setbtn"),
+		decompilermode = settingsFrame:WaitForChild("decompiler"),
+		primarydecompiler = settingsFrame:WaitForChild("primaryde"),
+	}
+	
+	function dex.buildTree(gui)
+		for _, child in ipairs(gui.treeview:GetChildren()) do if child:IsA("GuiObject") then child:Destroy() end end
+		local yOffset = 0
+		local searchQuery = gui.searchtextbox.Text:lower()
+	
+		local function addNode(instance, indent)
+			if searchQuery ~= "" and not instance.Name:lower():find(searchQuery, 1, true) then return end
+			local hasChildren = #instance:GetChildren() > 0
+			local isExpanded = dex.config.expandedNodes[instance] or false
+			local button = Instance.new("TextButton")
+			button.Size, button.Position, button.BackgroundTransparency, button.Text = UDim2.new(1, -5, 0, 20), UDim2.new(0, indent * 16 + 5, 0, yOffset), 1, ""
+			button.Parent = gui.treeview
+			local arrow = Instance.new("TextLabel")
+			arrow.Size, arrow.BackgroundTransparency, arrow.TextColor3, arrow.TextSize, arrow.Parent = UDim2.new(0, 16, 1, 0), 1, Color3.fromRGB(200, 200, 200), 5, button
+			arrow.Text = hasChildren and (isExpanded and "▼" or "▶") or ""
+			local icon = Instance.new("ImageLabel")
+			icon.Size, icon.Position, icon.BackgroundTransparency, icon.Image = UDim2.new(0, 16, 0, 16), UDim2.new(0, 16, 0, 2), 1, "rbxasset://textures/ClassImages.png"
+			local idx = classIcons[instance.ClassName] or classIcons["Default"]
+			icon.ImageRectOffset, icon.ImageRectSize, icon.Parent = Vector2.new(idx * 16, 0), Vector2.new(16, 16), button
+			local name = Instance.new("TextLabel")
+			name.Size, name.Position, name.BackgroundTransparency, name.TextColor3, name.TextXAlignment, name.Parent = UDim2.new(1, -36, 1, 0), UDim2.new(0, 36, 0, 0), 1, Color3.fromRGB(220, 220, 220), Enum.TextXAlignment.Left, button
+			name.Text = instance.Name
+			yOffset = yOffset + 20
+			button.MouseButton1Click:Connect(function()
+				if hasChildren then dex.config.expandedNodes[instance] = not isExpanded dex.buildTree(gui) end
+				dex.selectInstance(instance, gui)
+			end)
+			local lastClick = 0
+			button.MouseButton1Click:Connect(function()
+				local now = tick()
+				if now - lastClick < 0.3 then
+					if instance:IsA("LocalScript") or instance:IsA("ModuleScript") or instance:IsA("Script") then
+						dex.viewScript(instance, gui)
+					end
+				end
+				lastClick = now
+			end)
+			if isExpanded and hasChildren then for _, c in ipairs(instance:GetChildren()) do addNode(c, indent + 1) end end
+		end
+		local order = {"Workspace", "Players", "Lighting", "MaterialService", "ReplicatedFirst", "ReplicatedStorage", "ServerScriptService", "ServerStorage", "StarterGui", "StarterPack", "StarterPlayer", "Teams", "SoundService", "TextChatService"}
+		for _, s in ipairs(order) do local ok, serv = pcall(game.GetService, game, s) if ok and serv then addNode(serv, 0) end end
+		gui.treeview.CanvasSize = UDim2.new(0, 0, 0, yOffset + 10)
+	end
+	
+	function dex.selectInstance(instance, gui)
+		dex.config.currentInstance = instance
+		gui.instancenamelabel.Text = instance.ClassName .. ' "' .. instance.Name .. '"'
+		for _, child in ipairs(gui.propertiesview:GetChildren()) do if child:IsA("GuiObject") then child:Destroy() end end
+		local ypos = 5
+		for _, propName in ipairs(allProps) do
+			local success, val = pcall(function() return instance[propName] end)
+			if success and val ~= nil then
+				local f = Instance.new("Frame")
+				f.Size, f.Position, f.BackgroundTransparency, f.Parent = UDim2.new(1, -14, 0, 20), UDim2.new(0, 0, 0, ypos), 1, gui.propertiesview
+				local n = Instance.new("TextLabel")
+				n.Size, n.Text, n.TextColor3, n.BackgroundTransparency, n.TextXAlignment, n.Parent = UDim2.new(0.4, 0, 1, 0), propName, Color3.fromRGB(150,150,150), 1, Enum.TextXAlignment.Left, f
+				local v = Instance.new("TextLabel")
+				v.Size, v.Position, v.Text, v.TextColor3, v.BackgroundTransparency, v.TextXAlignment, v.Parent = UDim2.new(0.6, 0, 1, 0), UDim2.new(0.4, 0, 0, 0), tostring(val), Color3.fromRGB(200,200,200), 1, Enum.TextXAlignment.Left, f
+				ypos = ypos + 20
+			end
+		end
+		gui.propertiesview.CanvasSize = UDim2.new(0, 0, 0, ypos + 5)
+	end
+	
+	function dex.viewScript(script, gui)
+		dex.config.currentScript = script
+		gui.scriptviewerframe.Visible = true
+		gui.explorerframe.Visible, gui.propertiespanel.Visible, gui.settingsframe.Visible = false, false, false
+		gui.scripttitle.Text = script:GetFullName()
+		gui.scriptdisplay.RichText = true
+	
+		local function updateDisplay(txt)
+			gui.scriptdisplay.Text = dex.highlight(txt)
+			local bounds = gui.scriptdisplay.TextBounds
+			gui.scriptdisplay.Size = UDim2.new(1, 0, 0, bounds.Y + 20)
+			gui.scriptscroll.CanvasSize = UDim2.new(0, bounds.X + 20, 0, bounds.Y + 40)
+		end
+	
+		if not dex.config.scriptCache[script] then
+			gui.scriptdisplay.Text = "Decompiling..."
+			task.spawn(function()
+				local s, r = pcall(function() return dex.decompile(script) end)
+				local final = s and r or "-- Decompilation Failed"
+				dex.config.scriptCache[script] = final
+				updateDisplay(final)
+			end)
+		else
+			updateDisplay(dex.config.scriptCache[script])
+		end
+	end
+	
+	-- BUTTONS
+	gui.copybutton.MouseButton1Click:Connect(function()
+		if setclipboard then setclipboard(dex.stripTags(gui.scriptdisplay.Text)) end
+	end)
+	
+	gui.savebutton.MouseButton1Click:Connect(function()
+		if writefile and dex.config.currentScript then
+			writefile(dex.config.currentScript.Name..".lua", dex.stripTags(gui.scriptdisplay.Text))
+		end
+	end)
+	
+	gui.refreshbutton.MouseButton1Click:Connect(function() dex.buildTree(gui) end)
+	gui.settingsbutton.MouseButton1Click:Connect(function() 
+		gui.settingsframe.Visible = not gui.settingsframe.Visible 
+		if gui.settingsframe.Visible then gui.settingsframe.ZIndex = 10 end
+	end)
+	gui.backbutton.MouseButton1Click:Connect(function()
+		gui.explorerframe.Visible, gui.propertiespanel.Visible, gui.scriptviewerframe.Visible = true, true, false
+	end)
+	gui.searchtextbox:GetPropertyChangedSignal("Text"):Connect(function() dex.buildTree(gui) end)
+	
+	dex.config.expandedNodes[game] = true
+	dex.buildTree(gui)
+end;
+task.spawn(C_35);
+
+return G2L["1"], require;
