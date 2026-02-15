@@ -1,0 +1,120 @@
+-- [[ SAFE LOAD CHECK ]] --
+-- This prevents the "Problem receiving data" disconnect error
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local LocalPlayer = Players.LocalPlayer
+
+-- [[ CLEANUP ]] --
+-- Removes old UI so you don't get duplicates
+local guiName = "UniversalIDTracker_Safe"
+local existingGui = CoreGui:FindFirstChild(guiName) or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild(guiName)
+if existingGui then existingGui:Destroy() end
+
+-- [[ UI CREATION ]] --
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = guiName
+-- Attempt to use CoreGui (stays on screen better), fallback to PlayerGui
+pcall(function()
+    ScreenGui.Parent = CoreGui
+end)
+if not ScreenGui.Parent then
+    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 240, 0, 100)
+MainFrame.Position = UDim2.new(0.5, -120, 0.1, 0) -- Top Center
+MainFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+MainFrame.BorderSizePixel = 0
+MainFrame.Active = true -- Blocks clicks from going through
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+-- [[ DRAG SCRIPT ]] --
+-- Custom smooth drag so it doesn't glitch
+local dragging, dragInput, dragStart, startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- [[ TEXT BOX (THE ID) ]] --
+local IDBox = Instance.new("TextBox")
+IDBox.Size = UDim2.new(0.9, 0, 0.35, 0)
+IDBox.Position = UDim2.new(0.05, 0, 0.1, 0)
+IDBox.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+IDBox.Text = tostring(game.PlaceId)
+IDBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+IDBox.TextSize = 18
+IDBox.Font = Enum.Font.GothamBold
+IDBox.TextEditable = false -- KEY: User cannot edit/reset this text
+IDBox.ClearTextOnFocus = false -- KEY: Text stays when you click it
+IDBox.Parent = MainFrame
+
+local BoxCorner = Instance.new("UICorner")
+BoxCorner.CornerRadius = UDim.new(0, 6)
+BoxCorner.Parent = IDBox
+
+-- [[ COPY BUTTON ]] --
+local CopyBtn = Instance.new("TextButton")
+CopyBtn.Size = UDim2.new(0.9, 0, 0.35, 0)
+CopyBtn.Position = UDim2.new(0.05, 0, 0.55, 0)
+CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215) -- Blue
+CopyBtn.Text = "COPY ID"
+CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyBtn.TextSize = 16
+CopyBtn.Font = Enum.Font.GothamBold
+CopyBtn.Parent = MainFrame
+
+local BtnCorner = Instance.new("UICorner")
+BtnCorner.CornerRadius = UDim.new(0, 6)
+BtnCorner.Parent = CopyBtn
+
+CopyBtn.MouseButton1Click:Connect(function()
+    if setclipboard then
+        setclipboard(tostring(game.PlaceId))
+        CopyBtn.Text = "COPIED!"
+        CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 100) -- Green
+        task.wait(1)
+        CopyBtn.Text = "COPY ID"
+        CopyBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215) -- Back to Blue
+    else
+        CopyBtn.Text = "ERR: NO CLIPBOARD"
+    end
+end)
