@@ -26,9 +26,25 @@ local S = {
 	aimbotOn=false, silentOn=false, fovR=150, smooth=30,
 	maxDist=500, tPart="Head", priority="Nearest", hitChance=100, showFov=true,
 	predOn=true, bulletSpeed=300,
+	aimMethod="mousemoverel",
 
 	espOn=false, boxESP=false, wallhack=false, tracers=false,
 	nameESP=false, healthESP=false, distESP=false,
+
+	col_box    = Color3.fromRGB(255, 60,  60),
+	col_skel   = Color3.fromRGB(255, 80,  80),
+	col_tracer = Color3.fromRGB(255,200,   0),
+	col_name   = Color3.fromRGB(255,255, 255),
+	col_dist   = Color3.fromRGB(160,200, 255),
+	col_fov    = Color3.fromRGB(255,255, 255),
+	col_hpHigh = Color3.fromRGB( 50,220,  30),
+	col_hpLow  = Color3.fromRGB(255,  0,   0),
+
+	boxThick   = 1,
+	skelThick  = 1.5,
+	tracerThick= 1,
+	espAlpha   = 1,
+	cornerBox  = false,
 
 	speedOn=false, ws=16, infJump=false, jumpPow=50,
 	flyOn=false, flySpd=60, noclipOn=false,
@@ -37,7 +53,14 @@ local S = {
 	godMode=false, frozen=false,
 }
 
--- skeleton bone connections for R15 and R6
+local function moveMouseBy(dx, dy)
+	if S.aimMethod == "mousemoverel" then
+		pcall(mousemoverel, dx, dy)
+	elseif S.aimMethod == "camera" then
+		cam.CFrame = cam.CFrame * CFrame.Angles(-math.rad(dy*0.05), -math.rad(dx*0.05), 0)
+	end
+end
+
 local R15 = {
 	{"Head","UpperTorso"},
 	{"UpperTorso","LowerTorso"},
@@ -57,7 +80,6 @@ local function sameTeam(pl)
 	return pl.Team == lp.Team
 end
 
--- linear prediction: where the target will be by the time bullet arrives
 local function predicted(part)
 	if not S.predOn then return part.Position end
 	local vel  = part.AssemblyLinearVelocity
@@ -78,7 +100,7 @@ local function targets()
 		if not h or h.Health <= 0 then continue end
 		local part = c:FindFirstChild(S.tPart) or c:FindFirstChild("HumanoidRootPart")
 		if not part then continue end
-		local pred    = predicted(part)
+		local pred = predicted(part)
 		local s, front = toScreen(pred)
 		if not front then continue end
 		if (s - mid()).Magnitude > S.fovR then continue end
@@ -92,41 +114,72 @@ end
 local function bestTarget()
 	local list = targets()
 	if #list == 0 then return nil end
-	if     S.priority == "Nearest"   then table.sort(list, function(a,b) return a.d2 < b.d2  end)
-	elseif S.priority == "Lowest HP" then table.sort(list, function(a,b) return a.hp < b.hp  end)
+	if     S.priority == "Nearest"   then table.sort(list, function(a,b) return a.d2 < b.d2 end)
+	elseif S.priority == "Lowest HP" then table.sort(list, function(a,b) return a.hp < b.hp end)
 	elseif S.priority == "Random"    then return list[math.random(1,#list)] end
 	return list[1]
 end
 
--- drawing pool
+local SHOOT_NAMES = {
+	"Shoot","shoot","Fire","fire","Fired","fired",
+	"BulletHit","Hit","hit","DealDamage","Damage","damage",
+	"OnShoot","ShootEvent","FireBullet","Attack","attack",
+}
+
+local function findShootRemote(tool)
+	if not tool then return nil end
+	for _,name in ipairs(SHOOT_NAMES) do
+		local r = tool:FindFirstChild(name)
+		if r and r:IsA("RemoteEvent") then return r end
+	end
+	for _,obj in tool:GetDescendants() do
+		if obj:IsA("RemoteEvent") then return obj end
+	end
+	return nil
+end
+
 local pool = {}
+
 local function get(uid, k, ctor)
 	local key = uid.."_"..k
 	if not pool[key] then pool[key] = ctor() end
 	return pool[key]
 end
+
 local function hidePlayer(uid)
 	for k,d in pairs(pool) do
 		if k:sub(1,#uid+1) == uid.."_" then d.Visible = false end
 	end
 end
+
+local function removePlayer(uid)
+	local prefix = uid.."_"
+	for k,d in pairs(pool) do
+		if k:sub(1,#prefix) == prefix then
+			pcall(function() d:Remove() end)
+			pool[k] = nil
+		end
+	end
+end
+
 local function hideAll()
 	for _,d in pairs(pool) do d.Visible = false end
 end
 
--- Transparency: 0 = invisible, 1 = fully visible
 local function newLine(col, thick)
 	local d = Drawing.new("Line")
 	d.Visible=false d.Thickness=thick or 1
 	d.Color=col or Color3.fromRGB(255,80,80) d.Transparency=1
 	return d
 end
+
 local function newRect(filled, col, alpha)
 	local d = Drawing.new("Square")
 	d.Visible=false d.Thickness=1 d.Filled=filled or false
 	d.Color=col or Color3.fromRGB(255,80,80) d.Transparency=alpha or 1
 	return d
 end
+
 local function newTxt(sz, col)
 	local d = Drawing.new("Text")
 	d.Visible=false d.Size=sz or 14
@@ -136,17 +189,44 @@ local function newTxt(sz, col)
 end
 
 local fovCircle = Drawing.new("Circle")
-fovCircle.Visible=false fovCircle.Radius=S.fovR
+fovCircle.Visible=false
+fovCircle.Radius=S.fovR
 fovCircle.Color=Color3.fromRGB(255,255,255)
-fovCircle.Thickness=1 fovCircle.Filled=false fovCircle.Transparency=1
+fovCircle.Thickness=1
+fovCircle.Filled=false
+fovCircle.Transparency=1
 
--- actual top/bottom of the char using head position so the box fits properly
+local function drawCornerBox(uid, bx, by, bw, bh, col, thick, alpha)
+	local len = math.min(bw, bh) * 0.22
+	local corners = {
+		{Vector2.new(bx,by),       Vector2.new(bx+len,by)},
+		{Vector2.new(bx,by),       Vector2.new(bx,by+len)},
+		{Vector2.new(bx+bw,by),    Vector2.new(bx+bw-len,by)},
+		{Vector2.new(bx+bw,by),    Vector2.new(bx+bw,by+len)},
+		{Vector2.new(bx,by+bh),    Vector2.new(bx+len,by+bh)},
+		{Vector2.new(bx,by+bh),    Vector2.new(bx,by+bh-len)},
+		{Vector2.new(bx+bw,by+bh), Vector2.new(bx+bw-len,by+bh)},
+		{Vector2.new(bx+bw,by+bh), Vector2.new(bx+bw,by+bh-len)},
+	}
+	for i,pts in ipairs(corners) do
+		local ln = get(uid,"cb"..i, function() return newLine(col, thick) end)
+		ln.Color=col ln.Thickness=thick ln.Transparency=alpha
+		ln.From=pts[1] ln.To=pts[2] ln.Visible=true
+	end
+end
+
+local function hideCornerBox(uid)
+	for i=1,8 do
+		local ln=pool[uid.."_cb"..i] if ln then ln.Visible=false end
+	end
+end
+
 local function charBounds(c, hrp, h)
 	local head = c:FindFirstChild("Head")
 	local topP = head
-		and Vector3.new(hrp.Position.X, head.Position.Y + 0.75, hrp.Position.Z)
-		or  hrp.Position + Vector3.new(0, h.HipHeight + 1.6, 0)
-	local botP = hrp.Position - Vector3.new(0, h.HipHeight + 0.2, 0)
+		and Vector3.new(hrp.Position.X, head.Position.Y+0.75, hrp.Position.Z)
+		or  hrp.Position + Vector3.new(0, h.HipHeight+1.6, 0)
+	local botP = hrp.Position - Vector3.new(0, h.HipHeight+0.2, 0)
 	return topP, botP
 end
 
@@ -160,18 +240,14 @@ local function drawPlayer(pl)
 	if not hrp then hidePlayer(uid) return end
 
 	local topW, botW = charBounds(c, hrp, h)
-
 	local topVP = cam:WorldToViewportPoint(topW)
 	local botVP = cam:WorldToViewportPoint(botW)
 	if topVP.Z <= 0 then hidePlayer(uid) return end
 
 	local top2 = Vector2.new(topVP.X, topVP.Y)
 	local bot2 = Vector2.new(botVP.X, botVP.Y)
-
-	local bh = math.abs(top2.Y - bot2.Y)
+	local bh   = math.abs(top2.Y - bot2.Y)
 	if bh < 4 then hidePlayer(uid) return end
-
-	-- wider box so it actually covers arms (0.68 instead of 0.45)
 	local bw = bh * 0.68
 	local bx = top2.X - bw*0.5
 	local by = top2.Y
@@ -179,17 +255,22 @@ local function drawPlayer(pl)
 	local r    = root()
 	local dist = r and (hrp.Position - r.Position).Magnitude or 0
 
-	-- box esp
 	if S.boxESP then
-		local b = get(uid,"box",function() return newRect(false, Color3.fromRGB(255,60,60), 1) end)
-		b.Position = Vector2.new(bx, by)
-		b.Size     = Vector2.new(bw, bh)
-		b.Visible  = true
+		if S.cornerBox then
+			local b = pool[uid.."_box"] if b then b.Visible=false end
+			drawCornerBox(uid, bx, by, bw, bh, S.col_box, S.boxThick, S.espAlpha)
+		else
+			hideCornerBox(uid)
+			local b = get(uid,"box", function() return newRect(false, S.col_box, S.espAlpha) end)
+			b.Color=S.col_box b.Thickness=S.boxThick b.Transparency=S.espAlpha
+			b.Position=Vector2.new(bx, by) b.Size=Vector2.new(bw, bh)
+			b.Visible=true
+		end
 	else
 		local b = pool[uid.."_box"] if b then b.Visible=false end
+		hideCornerBox(uid)
 	end
 
-	-- skeleton wallhack: lines between actual body parts
 	if S.wallhack then
 		local isR15 = c:FindFirstChild("UpperTorso") ~= nil
 		local skel  = isR15 and R15 or R6
@@ -201,7 +282,8 @@ local function drawPlayer(pl)
 				local s1, f1 = toScreen(p1.Position)
 				local s2, f2 = toScreen(p2.Position)
 				if f1 and f2 then
-					local ln = get(uid, key, function() return newLine(Color3.fromRGB(255,80,80), 1.5) end)
+					local ln = get(uid, key, function() return newLine(S.col_skel, S.skelThick) end)
+					ln.Color=S.col_skel ln.Thickness=S.skelThick ln.Transparency=S.espAlpha
 					ln.From=s1 ln.To=s2 ln.Visible=true
 				else
 					local ln = pool[uid.."_"..key] if ln then ln.Visible=false end
@@ -216,47 +298,49 @@ local function drawPlayer(pl)
 		end
 	end
 
-	-- tracer from bottom of screen to feet
 	if S.tracers then
-		local tr = get(uid,"tr",function() return newLine(Color3.fromRGB(255,200,0), 1) end)
+		local tr = get(uid,"tr", function() return newLine(S.col_tracer, S.tracerThick) end)
+		tr.Color=S.col_tracer tr.Thickness=S.tracerThick tr.Transparency=S.espAlpha
 		tr.From=Vector2.new(cam.ViewportSize.X/2, cam.ViewportSize.Y)
 		tr.To=bot2 tr.Visible=true
 	else
 		local t = pool[uid.."_tr"] if t then t.Visible=false end
 	end
 
-	-- name above head, 15px
 	local nameOff = 0
 	if S.nameESP then
-		local nm = get(uid,"nm",function() return newTxt(15, Color3.fromRGB(255,255,255)) end)
+		local nm = get(uid,"nm", function() return newTxt(15, S.col_name) end)
+		nm.Color=S.col_name nm.Transparency=S.espAlpha
 		nm.Text=pl.Name nm.Position=Vector2.new(top2.X, top2.Y-18) nm.Visible=true
 		nameOff = 16
 	else
 		local n = pool[uid.."_nm"] if n then n.Visible=false end
 	end
 
-	-- dist above name
 	if S.distESP then
-		local dt = get(uid,"dt",function() return newTxt(13, Color3.fromRGB(160,200,255)) end)
+		local dt = get(uid,"dt", function() return newTxt(13, S.col_dist) end)
+		dt.Color=S.col_dist dt.Transparency=S.espAlpha
 		dt.Text=math.floor(dist).."m"
 		dt.Position=Vector2.new(top2.X, top2.Y-18-nameOff) dt.Visible=true
 	else
 		local d = pool[uid.."_dt"] if d then d.Visible=false end
 	end
 
-	-- health bar left of box
 	if S.healthESP then
 		local pct = math.clamp(h.Health / math.max(h.MaxHealth,1), 0, 1)
 		local barX = bx - 6
 
-		local bg = get(uid,"hbg",function() return newRect(true, Color3.fromRGB(15,15,15), 0.85) end)
+		local bg = get(uid,"hbg", function() return newRect(true, Color3.fromRGB(15,15,15), 0.85) end)
 		bg.Position=Vector2.new(barX, by) bg.Size=Vector2.new(4, bh) bg.Visible=true
 
-		local fg = get(uid,"hfg",function()
+		local fg = get(uid,"hfg", function()
 			local d=Drawing.new("Square") d.Filled=true d.Transparency=1 d.Visible=false return d
 		end)
-		local fh = bh * pct
-		fg.Color=Color3.fromRGB(math.floor(255*(1-pct)), math.floor(220*pct), 30)
+		local r2 = S.col_hpLow.R + (S.col_hpHigh.R - S.col_hpLow.R) * pct
+		local g2 = S.col_hpLow.G + (S.col_hpHigh.G - S.col_hpLow.G) * pct
+		local b2 = S.col_hpLow.B + (S.col_hpHigh.B - S.col_hpLow.B) * pct
+		fg.Color  = Color3.new(r2, g2, b2)
+		local fh  = bh * pct
 		fg.Position=Vector2.new(barX, by+(bh-fh))
 		fg.Size=Vector2.new(4, math.max(fh,1)) fg.Visible=true
 	else
@@ -270,6 +354,7 @@ local spinAngle = 0
 
 RunService.RenderStepped:Connect(function(dt)
 	fovCircle.Position=mid() fovCircle.Radius=S.fovR
+	fovCircle.Color=S.col_fov
 	fovCircle.Visible=S.showFov and (S.aimbotOn or S.silentOn)
 
 	if S.aimbotOn and UIS:IsMouseButtonPressed(Enum.UserInputType.MouseButton2) then
@@ -277,8 +362,8 @@ RunService.RenderStepped:Connect(function(dt)
 		if t then
 			local s2d   = toScreen(predicted(t.part))
 			local delta = s2d - mid()
-			local f     = math.clamp(1-S.smooth/100, 0.02, 1)
-			mousemoverel(delta.X*f, delta.Y*f)
+			local f     = math.clamp(1 - S.smooth/100, 0.02, 1)
+			moveMouseBy(delta.X * f, delta.Y * f)
 		end
 	end
 
@@ -293,11 +378,10 @@ RunService.RenderStepped:Connect(function(dt)
 	if S.spinOn then
 		spinAngle += S.spinSpd * dt
 		local r = root()
-		if r then r.CFrame=CFrame.new(r.CFrame.Position)*CFrame.Angles(0,math.rad(spinAngle),0) end
+		if r then r.CFrame = CFrame.new(r.CFrame.Position)*CFrame.Angles(0,math.rad(spinAngle),0) end
 	end
 end)
 
--- silent aim: hook click and redirect shot to best target
 UIS.InputBegan:Connect(function(input, gp)
 	if gp or input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
 	if not S.silentOn then return end
@@ -309,15 +393,16 @@ UIS.InputBegan:Connect(function(input, gp)
 	pcall(function()
 		local tool = c:FindFirstChildWhichIsA("Tool")
 		if not tool then return end
-		local remote = tool:FindFirstChild("Shoot") or tool:FindFirstChild("Fire")
-			or tool:FindFirstChild("shoot") or tool:FindFirstChild("fire")
-		if remote and remote:IsA("RemoteEvent") then
-			remote:FireServer(t.part.Position, (t.part.Position - cam.CFrame.Position).Unit)
-		end
+		local remote = findShootRemote(tool)
+		if not remote then return end
+		local pos = t.part.Position
+		local dir = (pos - cam.CFrame.Position).Unit
+		pcall(function() remote:FireServer(pos, dir) end)
+		pcall(function() remote:FireServer(CFrame.new(pos, pos+dir)) end)
+		pcall(function() remote:FireServer(t.part) end)
 	end)
 end)
 
--- fly
 local flyConn, bVel, bGyro
 
 local function stopFly()
@@ -402,20 +487,45 @@ RunService.Heartbeat:Connect(function()
 	if S.speedOn and h.WalkSpeed ~= S.ws then h.WalkSpeed=S.ws end
 end)
 
-lp.CharacterAdded:Connect(function(c)
-	local h=c:WaitForChild("Humanoid")
+local function applyCharacterSettings(c)
+	local h = c:WaitForChild("Humanoid", 10)
+	if not h then return end
 	task.wait(0.15)
 	if S.speedOn  then h.WalkSpeed=S.ws end
-	h.JumpPower=S.jumpPow cam.FieldOfView=S.fovOvr
+	h.JumpPower   = S.jumpPow
+	cam.FieldOfView = S.fovOvr
 	if S.flyOn    then h.PlatformStand=true task.wait(0.2) startFly()  end
 	if S.noclipOn then task.wait(0.2) setNoclip(true)                   end
 	if S.godMode  then task.wait(0.2) setGod(true)                      end
 	if S.frozen   then task.wait(0.2) setFreeze(true)                   end
+end
+
+lp.CharacterAdded:Connect(applyCharacterSettings)
+
+local function hookPlayer(pl)
+	pl.CharacterAdded:Connect(function()
+		removePlayer(tostring(pl.UserId))
+	end)
+	pl.CharacterRemoving:Connect(function()
+		removePlayer(tostring(pl.UserId))
+	end)
+end
+
+for _,pl in Players:GetPlayers() do
+	if pl ~= lp then hookPlayer(pl) end
+end
+
+Players.PlayerAdded:Connect(function(pl)
+	hookPlayer(pl)
+end)
+
+Players.PlayerRemoving:Connect(function(pl)
+	removePlayer(tostring(pl.UserId))
 end)
 
 local Window=Rayfield:CreateWindow({
-	Name="Lunar Universal", Icon="moon",
-	LoadingTitle="Lunar Universal", LoadingSubtitle="universal hub",
+	Name="Lunar Universal v2", Icon="moon",
+	LoadingTitle="Lunar Universal", LoadingSubtitle="universal hub v2",
 	Theme="Default", ToggleUIKeybind="K",
 	DisableRayfieldPrompts=false, DisableBuildWarnings=true,
 	ConfigurationSaving={Enabled=true, FolderName="LunarUniversal", FileName="config"},
@@ -424,6 +534,7 @@ local Window=Rayfield:CreateWindow({
 
 local AimTab  = Window:CreateTab("Aimbot",   "crosshair")
 local VisTab  = Window:CreateTab("Visuals",  "eye")
+local ColTab  = Window:CreateTab("Colors",   "palette")
 local MovTab  = Window:CreateTab("Movement", "wind")
 local PlrTab  = Window:CreateTab("Player",   "user")
 local MiscTab = Window:CreateTab("Misc",     "settings")
@@ -432,6 +543,15 @@ AimTab:CreateSection("Aimbot")
 AimTab:CreateToggle({Name="Aimbot (hold RMB)", CurrentValue=false, Flag="AimbotOn",  Callback=function(v) S.aimbotOn=v  end})
 AimTab:CreateToggle({Name="Silent Aim",         CurrentValue=false, Flag="SilentOn",  Callback=function(v) S.silentOn=v  end})
 AimTab:CreateToggle({Name="Show FOV Circle",    CurrentValue=true,  Flag="ShowFov",   Callback=function(v) S.showFov=v   end})
+AimTab:CreateSection("Aim Method")
+AimTab:CreateDropdown({
+	Name="Aim Method",
+	Options={"mousemoverel","camera"},
+	CurrentOption={"mousemoverel"},
+	MultipleOptions=false,
+	Flag="AimMethod",
+	Callback=function(v) S.aimMethod=v[1] end
+})
 AimTab:CreateSection("Config")
 AimTab:CreateDropdown({Name="Target Part",Options={"Head","HumanoidRootPart","Torso","UpperTorso"},CurrentOption={"Head"},MultipleOptions=false,Flag="TgtPart",Callback=function(v) S.tPart=v[1] end})
 AimTab:CreateDropdown({Name="Priority",Options={"Nearest","Lowest HP","Random"},CurrentOption={"Nearest"},MultipleOptions=false,Flag="TgtPrio",Callback=function(v) S.priority=v[1] end})
@@ -444,20 +564,28 @@ AimTab:CreateToggle({Name="Enable Prediction", CurrentValue=true, Flag="PredOn",
 AimTab:CreateSlider({Name="Bullet Speed", Range={50,2000}, Increment=10, Suffix=" sp", CurrentValue=300, Flag="BulletSpd", Callback=function(v) S.bulletSpeed=v end})
 
 VisTab:CreateSection("Player ESP")
-VisTab:CreateToggle({Name="ESP Master Switch",   CurrentValue=false, Flag="EspOn",    Callback=function(v) S.espOn=v if not v then hideAll() end end})
-VisTab:CreateToggle({Name="Box ESP",              CurrentValue=false, Flag="BoxEsp",   Callback=function(v) S.boxESP=v    end})
-VisTab:CreateToggle({Name="Skeleton (Wallhack)",  CurrentValue=false, Flag="Wallhack", Callback=function(v) S.wallhack=v  end})
-VisTab:CreateToggle({Name="Tracers",              CurrentValue=false, Flag="Tracers",  Callback=function(v) S.tracers=v   end})
-VisTab:CreateToggle({Name="Name ESP",             CurrentValue=false, Flag="NameEsp",  Callback=function(v) S.nameESP=v   end})
-VisTab:CreateToggle({Name="Health Bar",           CurrentValue=false, Flag="HpEsp",    Callback=function(v) S.healthESP=v end})
-VisTab:CreateToggle({Name="Distance ESP",         CurrentValue=false, Flag="DistEsp",  Callback=function(v) S.distESP=v   end})
+VisTab:CreateToggle({Name="ESP Master Switch",   CurrentValue=false, Flag="EspOn",     Callback=function(v) S.espOn=v if not v then hideAll() end end})
+VisTab:CreateToggle({Name="Box ESP",              CurrentValue=false, Flag="BoxEsp",    Callback=function(v) S.boxESP=v     end})
+VisTab:CreateToggle({Name="Corner Box Style",     CurrentValue=false, Flag="CornerBox", Callback=function(v) S.cornerBox=v  end})
+VisTab:CreateToggle({Name="Skeleton (Wallhack)",  CurrentValue=false, Flag="Wallhack",  Callback=function(v) S.wallhack=v   end})
+VisTab:CreateToggle({Name="Tracers",              CurrentValue=false, Flag="Tracers",   Callback=function(v) S.tracers=v    end})
+VisTab:CreateToggle({Name="Name ESP",             CurrentValue=false, Flag="NameEsp",   Callback=function(v) S.nameESP=v    end})
+VisTab:CreateToggle({Name="Health Bar",           CurrentValue=false, Flag="HpEsp",     Callback=function(v) S.healthESP=v  end})
+VisTab:CreateToggle({Name="Distance ESP",         CurrentValue=false, Flag="DistEsp",   Callback=function(v) S.distESP=v    end})
+VisTab:CreateSection("Thickness")
+VisTab:CreateSlider({Name="Box Thickness",     Range={1,5}, Increment=1, Suffix="px", CurrentValue=1, Flag="BoxThick",    Callback=function(v) S.boxThick=v    end})
+VisTab:CreateSlider({Name="Skeleton Thickness",Range={1,5}, Increment=1, Suffix="px", CurrentValue=2, Flag="SkelThick",   Callback=function(v) S.skelThick=v   end})
+VisTab:CreateSlider({Name="Tracer Thickness",  Range={1,5}, Increment=1, Suffix="px", CurrentValue=1, Flag="TracerThick", Callback=function(v) S.tracerThick=v end})
+VisTab:CreateSection("ESP Transparency")
+VisTab:CreateSlider({Name="Opacity", Range={10,100}, Increment=5, Suffix="%", CurrentValue=100, Flag="EspAlpha", Callback=function(v) S.espAlpha=v/100 end})
 VisTab:CreateSection("World")
 VisTab:CreateToggle({Name="Fullbright", CurrentValue=false, Flag="Fullbright", Callback=function(v)
 	game.Lighting.Ambient=v and Color3.fromRGB(178,178,178) or origAmb
 	game.Lighting.Brightness=v and 2 or origBri
 end})
 VisTab:CreateToggle({Name="Remove Fog", CurrentValue=false, Flag="RemoveFog", Callback=function(v)
-	game.Lighting.FogEnd=v and 1e6 or origFogE game.Lighting.FogStart=v and 1e6 or origFogS
+	game.Lighting.FogEnd=v and 1e6 or origFogE
+	game.Lighting.FogStart=v and 1e6 or origFogS
 end})
 VisTab:CreateToggle({Name="No Particles", CurrentValue=false, Flag="NoParticles", Callback=function(v)
 	local atmo=game.Lighting:FindFirstChildOfClass("Atmosphere")
@@ -466,6 +594,35 @@ VisTab:CreateToggle({Name="No Particles", CurrentValue=false, Flag="NoParticles"
 		if d:IsA("ParticleEmitter") or d:IsA("Smoke") or d:IsA("Fire") or d:IsA("Sparkles") then d.Enabled=not v end
 	end
 end})
+
+local function rgbSection(tab, label, key)
+	local cur = S[key]
+	local r = math.floor(cur.R*255)
+	local g = math.floor(cur.G*255)
+	local b = math.floor(cur.B*255)
+	tab:CreateSection(label)
+	tab:CreateSlider({Name="R", Range={0,255}, Increment=1, Suffix="", CurrentValue=r,
+		Flag=key.."_R", Callback=function(v)
+			local c=S[key] S[key]=Color3.fromRGB(v, math.floor(c.G*255), math.floor(c.B*255))
+		end})
+	tab:CreateSlider({Name="G", Range={0,255}, Increment=1, Suffix="", CurrentValue=g,
+		Flag=key.."_G", Callback=function(v)
+			local c=S[key] S[key]=Color3.fromRGB(math.floor(c.R*255), v, math.floor(c.B*255))
+		end})
+	tab:CreateSlider({Name="B", Range={0,255}, Increment=1, Suffix="", CurrentValue=b,
+		Flag=key.."_B", Callback=function(v)
+			local c=S[key] S[key]=Color3.fromRGB(math.floor(c.R*255), math.floor(c.G*255), v)
+		end})
+end
+
+rgbSection(ColTab, "Box ESP Color",    "col_box")
+rgbSection(ColTab, "Skeleton Color",   "col_skel")
+rgbSection(ColTab, "Tracer Color",     "col_tracer")
+rgbSection(ColTab, "Name Color",       "col_name")
+rgbSection(ColTab, "Distance Color",   "col_dist")
+rgbSection(ColTab, "FOV Circle Color", "col_fov")
+rgbSection(ColTab, "HP Bar (full)",    "col_hpHigh")
+rgbSection(ColTab, "HP Bar (empty)",   "col_hpLow")
 
 MovTab:CreateSection("Speed")
 MovTab:CreateToggle({Name="Speed Hack", CurrentValue=false, Flag="SpeedOn", Callback=function(v)
@@ -552,9 +709,14 @@ PlrTab:CreateSection("Target Player")
 local plrNames={"(none)"}
 for _,pl in Players:GetPlayers() do if pl~=lp then table.insert(plrNames,pl.Name) end end
 local tgtDrop=PlrTab:CreateDropdown({Name="Select Player",Options=plrNames,CurrentOption={"(none)"},MultipleOptions=false,Flag="TgtPlayer",Callback=function(_) end})
-Players.PlayerAdded:Connect(function(pl) table.insert(plrNames,pl.Name) tgtDrop:Refresh(plrNames) end)
+Players.PlayerAdded:Connect(function(pl)
+	table.insert(plrNames,pl.Name)
+	tgtDrop:Refresh(plrNames)
+end)
 Players.PlayerRemoving:Connect(function(pl)
-	for i,n in ipairs(plrNames) do if n==pl.Name then table.remove(plrNames,i) break end end
+	for i,n in ipairs(plrNames) do
+		if n==pl.Name then table.remove(plrNames,i) break end
+	end
 	tgtDrop:Refresh(plrNames)
 end)
 PlrTab:CreateButton({Name="Teleport to Selected", Callback=function()
@@ -574,13 +736,19 @@ MiscTab:CreateSection("Combat")
 MiscTab:CreateToggle({Name="Spin Bot",  CurrentValue=false,Flag="SpinBot",  Callback=function(v) S.spinOn=v if not v then spinAngle=0 end end})
 MiscTab:CreateSlider({Name="Spin Speed",Range={10,720},Increment=10,Suffix="°/s",CurrentValue=180,Flag="SpinSpeed",Callback=function(v) S.spinSpd=v end})
 MiscTab:CreateSection("Config")
-MiscTab:CreateButton({Name="Save Config",Callback=function() Rayfield:Notify({Title="Config",Content="Saved.",Duration=2}) end})
-MiscTab:CreateButton({Name="Load Config",Callback=function() Rayfield:LoadConfiguration() Rayfield:Notify({Title="Config",Content="Loaded.",Duration=2}) end})
+MiscTab:CreateButton({Name="Save Config",Callback=function()
+	Rayfield:SaveConfiguration()
+	Rayfield:Notify({Title="Config",Content="Saved.",Duration=2})
+end})
+MiscTab:CreateButton({Name="Load Config",Callback=function()
+	Rayfield:LoadConfiguration()
+	Rayfield:Notify({Title="Config",Content="Loaded.",Duration=2})
+end})
 
 Rayfield:LoadConfiguration()
 
 Rayfield:Notify({
-	Title="Lunar Universal",
-	Content="Loaded  —  K to toggle",
+	Title="Lunar Universal v2",
+	Content="Loaded  —  K to toggle UI",
 	Duration=4, Image="moon",
 })
