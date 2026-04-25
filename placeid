@@ -1,35 +1,31 @@
--- Wait for game to load
 if not game:IsLoaded() then game.Loaded:Wait() end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "PlaceID_UI"
-ScreenGui.ResetOnSpawn = false -- KEY: Doesn't disappear when you die
-ScreenGui.Parent = game:GetService("CoreGui") -- Higher layer, harder to break
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = game:GetService("CoreGui")
 
 local Main = Instance.new("Frame")
 Main.Size = UDim2.new(0, 200, 0, 100)
 Main.Position = UDim2.new(0.5, -100, 0.2, 0)
 Main.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 Main.Active = true
-Main.Draggable = true -- Allows you to drag it
+Main.Draggable = true
 Main.Parent = ScreenGui
 
--- Corner Rounding
 local Corner = Instance.new("UICorner")
 Corner.Parent = Main
 
--- The ID Display (TextBox)
 local IDLabel = Instance.new("TextBox")
 IDLabel.Size = UDim2.new(1, 0, 0.6, 0)
 IDLabel.BackgroundTransparency = 1
 IDLabel.Text = tostring(game.PlaceId)
 IDLabel.TextColor3 = Color3.new(1, 1, 1)
 IDLabel.TextSize = 20
-IDLabel.TextEditable = false -- KEY: Stops it from resetting when you click
-IDLabel.ClearTextOnFocus = false -- KEY: Text stays put
+IDLabel.TextEditable = false
+IDLabel.ClearTextOnFocus = false
 IDLabel.Parent = Main
 
--- Copy Button
 local CopyBtn = Instance.new("TextButton")
 CopyBtn.Size = UDim2.new(0.8, 0, 0.3, 0)
 CopyBtn.Position = UDim2.new(0.1, 0, 0.6, 0)
