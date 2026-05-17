@@ -168,7 +168,7 @@ do
     cfg:addDropdown({name="Priority", flag="aim_priority",
         items={"Nearest Mouse","Nearest Distance","Lowest HP","Line of Sight"},
         default="Nearest Mouse", callback=function()end})
-    cfg:addSlider({name="Smoothness",     flag="aim_smooth",    min=0.001,max=1,   default=0.01, interval=0.001,suffix="x"})
+    cfg:addSlider({name="Smoothness",     flag="aim_smooth",    min=0.01,max=1,   default=0.5, interval=0.01,suffix="x"})
     cfg:addSlider({name="Max Distance",   flag="aim_max_dist",  min=50,  max=2000,default=500,  interval=10,  suffix=" st"})
     cfg:addSlider({name="Hit Chance",     flag="aim_hit_chance",min=1,   max=100, default=100,  interval=1,   suffix="%"})
     cfg:addSlider({name="Pred Offset",    flag="aim_pred_val",  min=0,   max=1,   default=0.1,  interval=0.01,suffix="s"})
