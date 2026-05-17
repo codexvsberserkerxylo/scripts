@@ -1,4 +1,4 @@
---heyyyyyyy
+-- made by .weound/nick
 local library, notifications, themes = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Obelus/Library.lua"
 ))()
@@ -538,8 +538,8 @@ do
             local obj = w:FindFirstChild(propName)
             if not obj then return end
             local conn = obj:GetPropertyChangedSignal("Value"):Connect(function()
-                if flags["inf_ammo"] and obj.Value ~= 6777 then
-                    obj.Value = 6777
+                if flags["inf_ammo"] and obj.Value ~= 677 then
+                    obj.Value = 677
                 end
             end)
             table.insert(ammoConns, conn)
@@ -562,8 +562,8 @@ do
         callback=function(v)
             if v then
                 for _,w in pairs(getWeapons()) do
-                    local a = w:FindFirstChild("Ammo");    if a    then a.Value    = 6777 end
-                    local m = w:FindFirstChild("MaxAmmo"); if m    then m.Value    = 6777 end
+                    local a = w:FindFirstChild("Ammo");    if a    then a.Value    = 677 end
+                    local m = w:FindFirstChild("MaxAmmo"); if m    then m.Value    = 677 end
                 end
             end
         end})
