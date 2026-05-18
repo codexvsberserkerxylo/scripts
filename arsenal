@@ -1,4 +1,3 @@
--- made by .weound/nick
 local library, notifications, themes = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Obelus/Library.lua"
 ))()
@@ -26,6 +25,9 @@ local origBrightness = Lighting.Brightness
 local origFogEnd     = Lighting.FogEnd
 local origFogStart   = Lighting.FogStart
 
+local desiredBrightness = Lighting.Brightness
+local desiredClockTime  = Lighting.ClockTime
+
 local SKEL_PAIRS = {
     {"Head","UpperTorso"},
     {"UpperTorso","LowerTorso"},
@@ -41,6 +43,22 @@ local SKEL_PAIRS = {
     {"RightUpperLeg","RightLowerLeg"},
     {"LeftLowerLeg","LeftFoot"},
     {"RightLowerLeg","RightFoot"},
+}
+
+local colors = {
+    box         = hex("#64B4FF"),
+    boxFill     = hex("#64B4FF"),
+    boxFillTr   = 0.4,
+    tracer      = Color3.new(1,1,1),
+    tracerThick = 1,
+    snapLine    = hex("#64B4FF"),
+    snapThick   = 1,
+    skel        = hex("#AA55EB"),
+    xhair       = Color3.new(1,1,1),
+    fov         = Color3.new(1,1,1),
+    fovTr       = 0,
+    hlEnemy     = hex("#64B4FF"),
+    chams       = hex("#64B4FF"),
 }
 
 local function newDraw(t, props)
@@ -76,7 +94,7 @@ local function buildESP(pl)
     end
     espObjects[pl] = {
         box      = newDraw("Square", {Thickness=1, Filled=false,  Visible=false, Color=hex("#64B4FF")}),
-        boxFill  = newDraw("Square", {Filled=true,  Visible=false, Color=hex("#64B4FF"), Transparency=0.6}),
+        boxFill  = newDraw("Square", {Filled=true,  Visible=false, Color=hex("#64B4FF"), Transparency=0.4}),
         corners  = corners,
         nameText = newDraw("Text",   {Size=13, Center=true, Outline=true, Visible=false, Color=Color3.new(1,1,1), Font=2}),
         distText = newDraw("Text",   {Size=11, Center=true, Outline=true, Visible=false, Color=Color3.fromRGB(180,180,180), Font=2}),
@@ -106,23 +124,62 @@ for _, pl in pairs(Players:GetPlayers()) do buildESP(pl) end
 Players.PlayerAdded:Connect(buildESP)
 Players.PlayerRemoving:Connect(destroyESP)
 
+local function applyChams(pl)
+    if not flags["chams_on"] then return end
+    if pl == lp then return end
+    local c = pl.Character
+    if not c then return end
+    for _, p in pairs(c:GetDescendants()) do
+        if p:IsA("BasePart") then
+            if not p:GetAttribute("__lx_mat") then
+                p:SetAttribute("__lx_mat", tostring(p.Material))
+            end
+            pcall(function()
+                p.Material = Enum.Material[flags["chams_material"] or "Neon"]
+                p.Color    = colors.chams
+            end)
+        end
+    end
+end
+
+local function removeChams(pl)
+    local c = pl and pl.Character
+    if not c then return end
+    for _, p in pairs(c:GetDescendants()) do
+        if p:IsA("BasePart") then
+            local m = p:GetAttribute("__lx_mat")
+            if m then
+                pcall(function()
+                    p.Material = Enum.Material[m]
+                    p:SetAttribute("__lx_mat", nil)
+                end)
+            end
+        end
+    end
+end
+
 local silentAimTarget = nil
 
 local oldIndex
 oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
     if not checkcaller() then
-        local ok, isMouseResult = pcall(function()
+        local ok, isMouse = pcall(function()
             return typeof(self) == "Instance" and self:IsA("Mouse")
         end)
-        if ok and isMouseResult and flags["silent_aim"] then
-            local target = silentAimTarget
-            if target and target.Character then
-                local part = target.Character:FindFirstChild(flags["aim_part"] or "Head")
-                if part then
-                    if key == "Hit" then
-                        return CFrame.new(part.Position)
-                    elseif key == "Target" then
-                        return part
+        if ok and isMouse and flags["silent_aim"] and silentAimTarget then
+            local t = silentAimTarget
+            if t and t.Character then
+                local h = t.Character:FindFirstChildOfClass("Humanoid")
+                if h and h.Health > 0 then
+                    local part = t.Character:FindFirstChild(flags["aim_part"] or "Head")
+                    if part then
+                        if key == "Hit"     then return CFrame.new(part.Position) end
+                        if key == "Target"  then return part end
+                        if key == "UnitRay" then
+                            local origin = cam.CFrame.Position
+                            local dir    = (part.Position - origin).Unit
+                            return Ray.new(origin, dir * 1000)
+                        end
                     end
                 end
             end
@@ -135,6 +192,8 @@ local window = library:window({
     name = os.date('<font color="rgb(100,180,255)">lunar x</font> | <font color="rgb(170,85,235)">arsenal</font> | %b %d %Y'),
     size = dim2(0, 540, 0, 580),
 })
+
+library.gui.DisplayOrder = 999
 
 local AimbotTab   = window:tab({name="Aimbot"  })
 local VisualsTab  = window:tab({name="Visuals" })
@@ -156,6 +215,7 @@ do
        :addKeyBind({flag="trigger_key",key=Enum.KeyCode.Q,    mode="hold",   callback=function()end})
     sec:addToggle({name="Team Check",  flag="aim_team_check", default=false, callback=function()end})
     sec:addToggle({name="Prediction",  flag="aim_prediction", default=false, callback=function()end})
+    sec:addToggle({name="Wallbang",    flag="wallbang",       default=false, callback=function()end})
     sec:addToggle({name="Rage Mode",   flag="rage_mode",      default=false,
         callback=function(v)
             if v then notifications:create_notification({name="rage mode on"}) end
@@ -163,15 +223,15 @@ do
 
     local cfg = c1:section({name="Aim Config"})
     cfg:addDropdown({name="Target Part", flag="aim_part",
-        items={"Head","HumanoidRootPart","Torso","LeftArm","RightArm"},
+        items={"Head","HumanoidRootPart","UpperTorso","LowerTorso","LeftArm","RightArm"},
         default="Head", callback=function()end})
     cfg:addDropdown({name="Priority", flag="aim_priority",
         items={"Nearest Mouse","Nearest Distance","Lowest HP","Line of Sight"},
         default="Nearest Mouse", callback=function()end})
-    cfg:addSlider({name="Smoothness",     flag="aim_smooth",    min=0.01,max=1,   default=0.5, interval=0.01,suffix="x"})
-    cfg:addSlider({name="Max Distance",   flag="aim_max_dist",  min=50,  max=2000,default=500,  interval=10,  suffix=" st"})
-    cfg:addSlider({name="Hit Chance",     flag="aim_hit_chance",min=1,   max=100, default=100,  interval=1,   suffix="%"})
-    cfg:addSlider({name="Pred Offset",    flag="aim_pred_val",  min=0,   max=1,   default=0.1,  interval=0.01,suffix="s"})
+    cfg:addSlider({name="Smoothness",   flag="aim_smooth",    min=0.01,max=1,   default=0.15, interval=0.01,suffix="x"})
+    cfg:addSlider({name="Max Distance", flag="aim_max_dist",  min=50,  max=2000,default=500,  interval=10,  suffix=" st"})
+    cfg:addSlider({name="Hit Chance",   flag="aim_hit_chance",min=1,   max=100, default=100,  interval=1,   suffix="%"})
+    cfg:addSlider({name="Pred Offset",  flag="aim_pred_val",  min=0,   max=1,   default=0.1,  interval=0.01,suffix="s"})
 
     local fovSec = c2:section({name="FOV Circle"})
     fovSec:addToggle({name="Visible", flag="fov_visible", default=false,
@@ -180,7 +240,12 @@ do
         callback=function(v) fovCircle.Filled=v end})
     fovSec:addLabel({name="FOV Color"}):addColorPicker({flag="fov_color",
         color=Color3.new(1,1,1),
-        callback=function(c,a) fovCircle.Color=c; fovCircle.Transparency=a end})
+        callback=function(c,a)
+            colors.fov = c
+            colors.fovTr = a
+            fovCircle.Color = c
+            fovCircle.Transparency = a
+        end})
     fovSec:addSlider({name="Radius",    flag="fov_radius",    min=10,max=600,default=150,interval=5,  suffix="px",
         callback=function(v) fovCircle.Radius=v end})
     fovSec:addSlider({name="Thickness", flag="fov_thickness", min=1, max=5,  default=1,  interval=1,  suffix="px",
@@ -189,10 +254,12 @@ do
     local indSec = c2:section({name="Target Indicator"})
     local snapT = indSec:addToggle({name="Snap Line", flag="snap_line", default=false, folding=true, callback=function()end})
     snapT:addColorPicker({flag="snap_line_color", color=hex("#64B4FF"),
-        callback=function(c)
+        callback=function(c,a)
+            colors.snapLine = c
             for _,d in pairs(espObjects) do d.snapLine.Color=c end
         end})
-    snapT:addSlider({name="Thickness", flag="snap_thickness", min=1,max=5,default=1,interval=1,suffix="px"})
+    snapT:addSlider({name="Thickness", flag="snap_thickness", min=1,max=5,default=1,interval=1,suffix="px",
+        callback=function(v) colors.snapThick=v end})
 
     local trigSec = c2:section({name="Trigger Config"})
     trigSec:addSlider({name="Trigger Delay", flag="trigger_delay", min=0.01,max=0.5,default=0.08,interval=0.01,suffix="s"})
@@ -211,7 +278,8 @@ do
 
     local boxT = espSec:addToggle({name="Box ESP", flag="box_esp", default=true, folding=true, callback=function()end})
     boxT:addColorPicker({flag="box_color", color=hex("#64B4FF"),
-        callback=function(c)
+        callback=function(c,a)
+            colors.box = c
             for _,d in pairs(espObjects) do
                 d.box.Color=c
                 for _,l in pairs(d.corners) do l.Color=c end
@@ -220,15 +288,24 @@ do
     boxT:addToggle({name="Filled", flag="box_fill", default=false, callback=function()end})
     boxT:addColorPicker({flag="box_fill_color", color=hex("#64B4FF"), alpha=0.6,
         callback=function(c,a)
-            for _,d in pairs(espObjects) do d.boxFill.Color=c; d.boxFill.Transparency=1-a end
+            colors.boxFill   = c
+            colors.boxFillTr = 1 - a
+            for _,d in pairs(espObjects) do
+                d.boxFill.Color=c
+                d.boxFill.Transparency=1-a
+            end
         end})
 
     local tracerT = espSec:addToggle({name="Tracers", flag="tracers_on", default=false, folding=true, callback=function()end})
     tracerT:addColorPicker({flag="tracer_color", color=Color3.new(1,1,1),
-        callback=function(c) for _,d in pairs(espObjects) do d.tracer.Color=c end end})
+        callback=function(c,a)
+            colors.tracer = c
+            for _,d in pairs(espObjects) do d.tracer.Color=c end
+        end})
     tracerT:addDropdown({name="Origin", flag="tracer_origin",
         items={"Bottom","Center","Top","Mouse"}, default="Bottom", callback=function()end})
-    tracerT:addSlider({name="Thickness", flag="tracer_thick", min=1,max=4,default=1,interval=1,suffix="px"})
+    tracerT:addSlider({name="Thickness", flag="tracer_thick", min=1,max=4,default=1,interval=1,suffix="px",
+        callback=function(v) colors.tracerThick=v end})
 
     espSec:addToggle({name="Name ESP",     flag="name_esp", default=false, callback=function()end})
     espSec:addToggle({name="Distance ESP", flag="dist_esp", default=false, callback=function()end})
@@ -239,7 +316,8 @@ do
 
     local skelT = espSec:addToggle({name="Skeleton ESP", flag="skel_esp", default=false, folding=true, callback=function()end})
     skelT:addColorPicker({flag="skel_color", color=hex("#AA55EB"),
-        callback=function(c)
+        callback=function(c,a)
+            colors.skel = c
             for _,d in pairs(espObjects) do
                 for _,l in pairs(d.skeleton) do l.Color=c end
             end
@@ -253,15 +331,24 @@ do
     xhairSec:addSlider({name="Size",      flag="xhair_size",  min=2, max=30,default=10,interval=1,suffix="px"})
     xhairSec:addSlider({name="Gap",       flag="xhair_gap",   min=0, max=15,default=3, interval=1,suffix="px"})
     xhairSec:addSlider({name="Thickness", flag="xhair_thick", min=1, max=5, default=2, interval=1,suffix="px"})
-    xhairSec:addToggle({name="Dot",       flag="xhair_dot",   default=true,  callback=function()end})
+    xhairSec:addToggle({name="Dot",       flag="xhair_dot",   default=true, callback=function()end})
     xhairSec:addLabel({name="Color"}):addColorPicker({flag="xhair_color", color=Color3.new(1,1,1),
-        callback=function(c) for _,l in pairs(xhairLines) do l.Color=c end end})
+        callback=function(c,a)
+            colors.xhair = c
+            for _,l in pairs(xhairLines) do l.Color=c end
+        end})
 
     local worldSec = c2:section({name="World"})
     worldSec:addToggle({name="Fullbright", flag="fullbright", default=false,
         callback=function(v)
-            Lighting.Ambient    = v and Color3.fromRGB(178,178,178) or origAmbient
-            Lighting.Brightness = v and 2 or origBrightness
+            if v then
+                Lighting.Ambient    = Color3.fromRGB(178,178,178)
+                Lighting.Brightness = 2
+            else
+                Lighting.Ambient    = origAmbient
+                Lighting.Brightness = desiredBrightness
+                Lighting.ClockTime  = desiredClockTime
+            end
         end})
     worldSec:addToggle({name="Remove Fog", flag="remove_fog", default=false,
         callback=function(v)
@@ -281,11 +368,13 @@ do
         end})
     worldSec:addSlider({name="Brightness", flag="world_brightness", min=0,max=5,default=1,interval=0.1,suffix="x",
         callback=function(v)
-            if not flags["fullbright"] then Lighting.Brightness=v end
+            desiredBrightness = v
+            if not flags["fullbright"] then Lighting.Brightness = v end
         end})
     worldSec:addSlider({name="Time of Day", flag="time_of_day", min=0,max=24,default=14,interval=0.5,suffix="h",
         callback=function(v)
-            if not flags["fullbright"] then Lighting.ClockTime=v end
+            desiredClockTime = v
+            if not flags["fullbright"] then Lighting.ClockTime = v end
         end})
 
     local hlSec = c2:section({name="Highlights"})
@@ -296,7 +385,7 @@ do
                     local ex = pl.Character:FindFirstChild("LunarHL")
                     if v and not ex then
                         local h = Instance.new("Highlight")
-                        h.Name="LunarHL"; h.FillColor=hex("#64B4FF")
+                        h.Name="LunarHL"; h.FillColor=colors.hlEnemy
                         h.OutlineColor=Color3.new(1,1,1); h.FillTransparency=0.5
                         h.Parent=pl.Character
                     elseif not v and ex then ex:Destroy() end
@@ -304,7 +393,8 @@ do
             end
         end})
     hlSec:addColorPicker({flag="hl_enemy_fill", color=hex("#64B4FF"),
-        callback=function(c)
+        callback=function(c,a)
+            colors.hlEnemy = c
             for _,pl in pairs(Players:GetPlayers()) do
                 if pl ~= lp and pl.Character then
                     local ex = pl.Character:FindFirstChild("LunarHL")
@@ -322,45 +412,30 @@ do
                 h.OutlineColor=Color3.new(1,1,1); h.FillTransparency=0.6; h.Parent=c
             elseif not v and ex then ex:Destroy() end
         end})
-    hlSec:addToggle({name="Dropped Guns ESP", flag="gun_highlight", default=false,
-        callback=function(v)
-            for _,obj in pairs(Workspace:GetDescendants()) do
-                if obj:IsA("Tool") then
-                    local ex = obj:FindFirstChild("GunHL")
-                    if v and not ex then
-                        local h = Instance.new("Highlight")
-                        h.Name="GunHL"; h.FillColor=Color3.fromRGB(255,220,0)
-                        h.OutlineColor=Color3.fromRGB(255,180,0); h.FillTransparency=0.4; h.Parent=obj
-                    elseif not v and ex then ex:Destroy() end
-                end
-            end
-        end})
 
     local chamsSec = c2:section({name="Chams"})
     local chamsT = chamsSec:addToggle({name="Chams", flag="chams_on", default=false, folding=true,
         callback=function(v)
-            for _,pl in pairs(Players:GetPlayers()) do
-                if pl == lp then continue end
-                local c = pl.Character; if not c then continue end
-                for _,p in pairs(c:GetDescendants()) do
-                    if p:IsA("BasePart") then
-                        if v then
-                            p:SetAttribute("__lx_mat", tostring(p.Material))
-                            pcall(function()
-                                p.Material = Enum.Material[flags["chams_material"] or "Neon"]
-                                p.Color = flags["chams_color"] or hex("#64B4FF")
-                            end)
-                        else
-                            local m = p:GetAttribute("__lx_mat")
-                            if m then pcall(function() p.Material = Enum.Material[m] end) end
-                        end
-                    end
-                end
+            if v then
+                for _,pl in pairs(Players:GetPlayers()) do applyChams(pl) end
+            else
+                for _,pl in pairs(Players:GetPlayers()) do removeChams(pl) end
             end
         end})
     chamsT:addDropdown({name="Material", flag="chams_material",
-        items={"Neon","ForceField","SmoothPlastic"}, default="Neon", callback=function()end})
-    chamsT:addColorPicker({flag="chams_color", color=hex("#64B4FF"), callback=function()end})
+        items={"Neon","ForceField","SmoothPlastic"}, default="Neon",
+        callback=function()
+            if flags["chams_on"] then
+                for _,pl in pairs(Players:GetPlayers()) do applyChams(pl) end
+            end
+        end})
+    chamsT:addColorPicker({flag="chams_color", color=hex("#64B4FF"),
+        callback=function(c,a)
+            colors.chams = c
+            if flags["chams_on"] then
+                for _,pl in pairs(Players:GetPlayers()) do applyChams(pl) end
+            end
+        end})
 end
 
 do
@@ -453,22 +528,6 @@ do
                 if noclipConn then noclipConn:Disconnect(); noclipConn=nil end
             end
         end})
-
-    local noFallConn
-    movMisc:addToggle({name="No Fall Damage", flag="no_fall", default=false,
-        callback=function(v)
-            local h=getHum(); if not h then return end
-            if v then
-                noFallConn=h.FreeFalling:Connect(function()
-                    h:SetStateEnabled(Enum.HumanoidStateType.FallingDown,false)
-                    h:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,false)
-                end)
-            else
-                if noFallConn then noFallConn:Disconnect(); noFallConn=nil end
-                h:SetStateEnabled(Enum.HumanoidStateType.FallingDown,true)
-                h:SetStateEnabled(Enum.HumanoidStateType.Ragdoll,true)
-            end
-        end})
     movMisc:addToggle({name="Anti-AFK", flag="anti_afk", default=false, callback=function()end})
 
     local blinkSec = c2:section({name="Blink"})
@@ -488,7 +547,6 @@ do
     local c2 = WeaponTab:column({fill=true})
 
     local modSec = c1:section({name="Weapon Mods"})
-    modSec:addLabel({name="Arsenal — modifies ReplicatedStorage values"})
 
     local function getWeapons()
         local ws = RepStorage:FindFirstChild("Weapons")
@@ -531,39 +589,59 @@ do
             end
         end})
 
+    local AMMO_VALUE = 677
+
     local ammoConns = {}
 
+    local AMMO_PROPS = {"Ammo"}
+
     local function hookWeaponAmmo(w)
-        local function hookVal(propName)
+        for _, propName in ipairs(AMMO_PROPS) do
             local obj = w:FindFirstChild(propName)
-            if not obj then return end
+            if not obj then continue end
             local conn = obj:GetPropertyChangedSignal("Value"):Connect(function()
-                if flags["inf_ammo"] and obj.Value ~= 677 then
-                    obj.Value = 677
+                if flags["inf_ammo"] and obj.Value ~= AMMO_VALUE then
+                    pcall(function() obj.Value = AMMO_VALUE end)
                 end
             end)
             table.insert(ammoConns, conn)
         end
-        hookVal("Ammo")
-        hookVal("MaxAmmo")
     end
 
     for _,w in pairs(getWeapons()) do hookWeaponAmmo(w) end
 
-    local ws = RepStorage:FindFirstChild("Weapons")
-    if ws then
-        ws.ChildAdded:Connect(function(w)
-            task.wait(0.1)
+    local weaponFolder = RepStorage:FindFirstChild("Weapons")
+    if weaponFolder then
+        weaponFolder.ChildAdded:Connect(function(w)
+            task.wait(0.05)
             hookWeaponAmmo(w)
         end)
     end
+
+    task.spawn(function()
+        while true do
+            task.wait(0.5)
+            if flags["inf_ammo"] then
+                for _,w in pairs(getWeapons()) do
+                    for _, prop in ipairs(AMMO_PROPS) do
+                        local obj = w:FindFirstChild(prop)
+                        if obj and obj.Value ~= AMMO_VALUE then
+                            pcall(function() obj.Value = AMMO_VALUE end)
+                        end
+                    end
+                end
+            end
+        end
+    end)
 
     modSec:addToggle({name="Infinite Ammo", flag="inf_ammo", default=false,
         callback=function(v)
             if v then
                 for _,w in pairs(getWeapons()) do
-                    local a = w:FindFirstChild("Ammo");    if a    then a.Value    = 677 end
-                    local m = w:FindFirstChild("MaxAmmo"); if m    then m.Value    = 677 end
+                    for _, prop in ipairs(AMMO_PROPS) do
+                        local obj = w:FindFirstChild(prop)
+                        if obj then pcall(function() obj.Value = AMMO_VALUE end) end
+                    end
                 end
             end
         end})
@@ -573,12 +651,21 @@ do
     local killAllActive = false
     local killAllThread = nil
 
-    local function getShuffledEnemies()
+    local function isPlayerAlive(pl)
+        local c   = pl.Character
+        local h   = c and c:FindFirstChildOfClass("Humanoid")
+        local hrp = c and c:FindFirstChild("HumanoidRootPart")
+        return (c ~= nil) and (h ~= nil) and (hrp ~= nil) and (h.Health > 0)
+    end
+
+    local function getAliveEnemies()
         local list = {}
         for _,pl in pairs(Players:GetPlayers()) do
             if pl == lp then continue end
             if flags["kill_team_check"] and pl.Team == lp.Team then continue end
-            table.insert(list, pl)
+            if isPlayerAlive(pl) then
+                table.insert(list, pl)
+            end
         end
         for i = #list, 2, -1 do
             local j = math.random(1, i)
@@ -589,28 +676,44 @@ do
 
     local function runKillAll()
         while killAllActive do
-            local enemies = getShuffledEnemies()
+            local enemies = getAliveEnemies()
             if #enemies == 0 then task.wait(0.5); continue end
 
             for _, target in ipairs(enemies) do
                 if not killAllActive then return end
 
-                local deadline = tick() + 4
-                while killAllActive and tick() < deadline do
-                    local c   = target.Character
-                    local h   = c and c:FindFirstChildOfClass("Humanoid")
-                    local hrp = c and c:FindFirstChild("HumanoidRootPart")
-                    if c and h and hrp and h.Health > 0 then break end
+                local spawnDeadline = tick() + 4
+                while killAllActive and tick() < spawnDeadline do
+                    if isPlayerAlive(target) then break end
                     task.wait(0.1)
                 end
+
+                if not isPlayerAlive(target) then continue end
+
+                local engageStart   = tick()
+                local maxEngage     = flags["kill_engage_time"] or 4
 
                 while killAllActive do
                     local r   = getRoot()
                     local c   = target.Character
                     local h   = c and c:FindFirstChildOfClass("Humanoid")
                     local hrp = c and c:FindFirstChild("HumanoidRootPart")
-                    if not r or not c or not h or not hrp or h.Health <= 0 then break end
-                    r.CFrame = hrp.CFrame * CFrame.new(0, 0, 2.2)
+                    local head = c and c:FindFirstChild("Head")
+
+                    if not r or not c or not h or not hrp then break end
+                    if h.Health <= 0 then break end
+                    if tick() - engageStart > maxEngage then break end
+
+                    r.CFrame = hrp.CFrame * CFrame.new(0, 0, 5)
+
+                    if head then
+                        local aimPos = head.Position
+                        if flags["aim_prediction"] and hrp then
+                            aimPos = aimPos + hrp.AssemblyLinearVelocity * (flags["aim_pred_val"] or 0.1)
+                        end
+                        cam.CFrame = CFrame.lookAt(cam.CFrame.Position, aimPos)
+                    end
+
                     task.wait(flags["kill_delay"] or 0.06)
                 end
 
@@ -643,8 +746,9 @@ do
                    notifications:create_notification({name="kill all off"})
                end
            end})
-    utilSec:addToggle({name="Team Check", flag="kill_team_check", default=true, callback=function()end})
-    utilSec:addSlider({name="TP Delay",   flag="kill_delay", min=0.001,max=0.5,default=0.06,interval=0.01,suffix="s"})
+    utilSec:addToggle({name="Team Check",      flag="kill_team_check",  default=true,  callback=function()end})
+    utilSec:addSlider({name="TP Delay",        flag="kill_delay",       min=0.001,max=0.5,default=0.06,interval=0.001,suffix="s"})
+    utilSec:addSlider({name="Max Engage Time", flag="kill_engage_time", min=0.5,  max=10, default=4,   interval=0.5,  suffix="s"})
 
     local spinConn
     utilSec:addToggle({name="Spin Bot", flag="spin_on", default=false,
@@ -792,35 +896,69 @@ do
     local c1 = SettingsTab:column({fill=true})
     local c2 = SettingsTab:column({fill=true})
     local cfgSec = c1:section({name="Config"})
+
+    local cfgDir = library.directory.."/configs"
+    pcall(function()
+        if not isfolder(library.directory) then makefolder(library.directory) end
+        if not isfolder(cfgDir)            then makefolder(cfgDir)            end
+    end)
+
     cfgSec:addList({name="Configs", flag="cfg_list", scale=100})
     cfgSec:addTextBox({name="Config Name", default="", flag="cfg_name_box"})
+
     cfgSec:addButton({name="Create",
         callback=function()
-            if flags["cfg_name_box"]=="" then
+            local name = flags["cfg_name_box"]
+            if not name or name == "" then
                 notifications:create_notification({name="enter a config name first"}); return
             end
-            writefile(library.directory.."/configs/"..flags["cfg_name_box"]..".cfg", library:getConfig())
-            library:configListUpdate()
-            notifications:create_notification({name="created: "..flags["cfg_name_box"]})
+            local ok, err = pcall(function()
+                writefile(cfgDir.."/"..name..".cfg", library:getConfig())
+            end)
+            if ok then
+                library:configListUpdate()
+                notifications:create_notification({name="created: "..name})
+            else
+                notifications:create_notification({name="create failed"})
+            end
         end})
+
     cfgSec:addButton({name="Save",
         callback=function()
-            local n=flags["cfg_list"]; if not n or n=="" then return end
-            writefile(library.directory.."/configs/"..n..".cfg", library:getConfig())
-            notifications:create_notification({name="saved: "..n})
+            local n = flags["cfg_list"]
+            if not n or n == "" then
+                notifications:create_notification({name="select a config first"}); return
+            end
+            local ok = pcall(function()
+                writefile(cfgDir.."/"..n..".cfg", library:getConfig())
+            end)
+            notifications:create_notification({name=ok and ("saved: "..n) or "save failed"})
         end})
+
     cfgSec:addButton({name="Load",
         callback=function()
-            local n=flags["cfg_list"]; if not n or n=="" then return end
-            library:loadConfig(readfile(library.directory.."/configs/"..n..".cfg"))
-            notifications:create_notification({name="loaded: "..n})
+            local n = flags["cfg_list"]
+            if not n or n == "" then
+                notifications:create_notification({name="select a config first"}); return
+            end
+            local ok, data = pcall(readfile, cfgDir.."/"..n..".cfg")
+            if ok and data and data ~= "" then
+                pcall(function() library:loadConfig(data) end)
+                notifications:create_notification({name="loaded: "..n})
+            else
+                notifications:create_notification({name="load failed: "..n})
+            end
         end})
+
     cfgSec:addButton({name="Delete",
         callback=function()
-            local n=flags["cfg_list"]; if not n or n=="" then return end
-            delfile(library.directory.."/configs/"..n..".cfg")
+            local n = flags["cfg_list"]
+            if not n or n == "" then return end
+            pcall(function() delfile(cfgDir.."/"..n..".cfg") end)
             library:configListUpdate()
+            notifications:create_notification({name="deleted: "..n})
         end})
+
     cfgSec:addButton({name="Refresh", callback=function() library:configListUpdate() end})
     library:configListUpdate()
 
@@ -829,13 +967,28 @@ do
     uiSec:addLabel({name="Menu Toggle"}):addKeyBind({flag="menu_key",
         callback=function()
             if not window.is_closing_menu then
-                menuOpen=not menuOpen; window.toggle_menu(menuOpen)
+                menuOpen = not menuOpen
+                window.toggle_menu(menuOpen)
+                if not menuOpen then
+                    pcall(function()
+                        UIS.MouseBehavior    = Enum.MouseBehavior.Default
+                        UIS.MouseIconEnabled = true
+                    end)
+                end
             end
         end})
     uiSec:addLabel({name="Accent Color"}):addColorPicker({flag="accent_color",
         color=themes.preset.accent,
-        callback=function(c) library:updateTheme("accent",c) end})
+        callback=function(c,a) library:updateTheme("accent",c) end})
     uiSec:addButton({name="Unload Menu", callback=function() library:unloadMenu() end})
+end
+
+local function makeRayParams()
+    local rp = RaycastParams.new()
+    local myChar = getChar()
+    rp.FilterDescendantsInstances = myChar and {myChar} or {}
+    rp.FilterType = Enum.RaycastFilterType.Exclude
+    return rp
 end
 
 local function getTarget()
@@ -844,31 +997,48 @@ local function getTarget()
     local maxDist  = flags["aim_max_dist"] or 500
     local root     = getRoot()
     local best, bestScore = nil, math.huge
+    local wallbang = flags["wallbang"]
 
     for _, pl in pairs(Players:GetPlayers()) do
-        if pl==lp then continue end
-        if flags["aim_team_check"] and pl.Team==lp.Team then continue end
+        if pl == lp then continue end
+        if flags["aim_team_check"] and pl.Team == lp.Team then continue end
         local c    = pl.Character
         local h    = c and c:FindFirstChildOfClass("Humanoid")
         local part = c and c:FindFirstChild(flags["aim_part"] or "Head")
         local hrp  = c and c:FindFirstChild("HumanoidRootPart")
-        if not (c and h and part and hrp and h.Health>0) then continue end
-        if root and (hrp.Position-root.Position).Magnitude>maxDist then continue end
-        local sp,onScreen = cam:WorldToViewportPoint(part.Position)
+        if not (c and h and part and hrp and h.Health > 0) then continue end
+        if root and (hrp.Position - root.Position).Magnitude > maxDist then continue end
+
+        local sp, onScreen = cam:WorldToViewportPoint(part.Position)
         if not onScreen then continue end
-        local screenDist = (Vector2.new(sp.X,sp.Y)-mousePos).Magnitude
-        if screenDist>fov then continue end
+        local screenDist = (Vector2.new(sp.X, sp.Y) - mousePos).Magnitude
+        if screenDist > fov then continue end
+
         local priority = flags["aim_priority"] or "Nearest Mouse"
         local score
-        if     priority=="Nearest Mouse"    then score=screenDist
-        elseif priority=="Nearest Distance" then score=root and (hrp.Position-root.Position).Magnitude or screenDist
-        elseif priority=="Lowest HP"        then score=h.Health
-        elseif priority=="Line of Sight"    then
-            local rc=Workspace:Raycast(cam.CFrame.Position,(hrp.Position-cam.CFrame.Position).Unit*maxDist)
-            score=(rc and rc.Instance and rc.Instance:IsDescendantOf(c)) and screenDist or math.huge
+
+        if priority == "Nearest Mouse" then
+            score = screenDist
+        elseif priority == "Nearest Distance" then
+            score = root and (hrp.Position - root.Position).Magnitude or screenDist
+        elseif priority == "Lowest HP" then
+            score = h.Health
+        elseif priority == "Line of Sight" then
+            if wallbang then
+                score = screenDist
+            else
+                local rp = makeRayParams()
+                local rc = Workspace:Raycast(cam.CFrame.Position, (hrp.Position - cam.CFrame.Position).Unit * maxDist, rp)
+                score = (rc and rc.Instance and rc.Instance:IsDescendantOf(c)) and screenDist or math.huge
+            end
         end
-        if score<bestScore then best=pl; bestScore=score end
+
+        if score ~= nil and score < bestScore then
+            best      = pl
+            bestScore = score
+        end
     end
+
     return best
 end
 
@@ -882,27 +1052,48 @@ RunService.Heartbeat:Connect(function()
     local now = tick()
     if now - triggerCooldown < (flags["trigger_delay"] or 0.08) then return end
 
-    local mousePos = UIS:GetMouseLocation()
-    local tfov     = flags["trigger_fov"] or 80
     local maxDist  = flags["aim_max_dist"] or 500
+    local tfov     = flags["trigger_fov"]  or 80
+    local wallbang = flags["wallbang"]
+    local mousePos = UIS:GetMouseLocation()
+    local rp       = makeRayParams()
 
     for _, pl in pairs(Players:GetPlayers()) do
-        if pl==lp then continue end
-        if flags["aim_team_check"] and pl.Team==lp.Team then continue end
+        if pl == lp then continue end
+        if flags["aim_team_check"] and pl.Team == lp.Team then continue end
         local c   = pl.Character
         local h   = c and c:FindFirstChildOfClass("Humanoid")
         local hrp = c and c:FindFirstChild("HumanoidRootPart")
-        if not (c and h and hrp and h.Health>0) then continue end
+        if not (c and h and hrp and h.Health > 0) then continue end
 
-        local sp, onScreen = cam:WorldToViewportPoint(hrp.Position)
-        if not onScreen then continue end
-        if (Vector2.new(sp.X,sp.Y)-mousePos).Magnitude > tfov then continue end
+        local hitParts = {"Head", "UpperTorso", "LowerTorso", "HumanoidRootPart"}
+        local triggered = false
 
-        local unitRay = cam:ScreenPointToRay(mousePos.X, mousePos.Y)
-        local rc = Workspace:Raycast(unitRay.Origin, unitRay.Direction*maxDist)
-        if rc and rc.Instance and rc.Instance:IsDescendantOf(c) then
+        for _, partName in ipairs(hitParts) do
+            local part = c:FindFirstChild(partName)
+            if not part then continue end
+
+            local sp, onScreen = cam:WorldToViewportPoint(part.Position)
+            if not onScreen then continue end
+            if (Vector2.new(sp.X, sp.Y) - mousePos).Magnitude > tfov then continue end
+
+            if wallbang then
+                triggered = true
+                break
+            else
+                local origin = cam.CFrame.Position
+                local dir    = (part.Position - origin)
+                local rc     = Workspace:Raycast(origin, dir, rp)
+                if rc and rc.Instance and rc.Instance:IsDescendantOf(c) then
+                    triggered = true
+                    break
+                end
+            end
+        end
+
+        if triggered then
             mouse1press()
-            task.delay(0.05, function() mouse1release() end)
+            task.delay(0.04, function() mouse1release() end)
             triggerCooldown = now
             break
         end
@@ -918,7 +1109,7 @@ RunService.RenderStepped:Connect(function()
     fovCircle.Position = Vector2.new(mp.X, mp.Y)
 
     local currentTarget = getTarget()
-    silentAimTarget = currentTarget
+    silentAimTarget = (flags["silent_aim"] and currentTarget) or nil
 
     if flags["aim_on"] then
         local aimKey = flags["aim_key"]
@@ -946,7 +1137,7 @@ RunService.RenderStepped:Connect(function()
         local sz  = flags["xhair_size"]  or 10
         local gap = flags["xhair_gap"]   or 3
         local thk = flags["xhair_thick"] or 2
-        local col = flags["xhair_color"] or Color3.new(1,1,1)
+        local col = colors.xhair
         local function setL(l,fx,fy,tx,ty)
             l.From=Vector2.new(fx,fy); l.To=Vector2.new(tx,ty)
             l.Thickness=thk; l.Color=col; l.Visible=true
@@ -982,12 +1173,13 @@ RunService.RenderStepped:Connect(function()
         local sp, onScreen = cam:WorldToViewportPoint(hrp.Position)
         if not onScreen then hideAll(); continue end
 
-        local topSP = cam:WorldToViewportPoint(hrp.Position+Vector3.new(0, 3,   0))
-        local boxH  = math.abs(topSP.Y - sp.Y) * 2
-        local boxW  = boxH * 0.6
-        local bx    = sp.X - boxW/2
-        local by    = sp.Y - boxH/2
-        local boxCol = flags["box_color"] or hex("#64B4FF")
+        local topSP  = cam:WorldToViewportPoint(hrp.Position + Vector3.new(0,  2.8, 0))
+        local botSP  = cam:WorldToViewportPoint(hrp.Position - Vector3.new(0,  2.8, 0))
+        local boxH   = math.abs(botSP.Y - topSP.Y)
+        local boxW   = boxH * 0.55
+        local bx     = sp.X - boxW / 2
+        local by     = topSP.Y
+        local boxCol = colors.box
         local style  = flags["box_style"] or "Corner Box"
 
         if flags["box_esp"] then
@@ -1018,27 +1210,37 @@ RunService.RenderStepped:Connect(function()
         end
 
         if flags["box_esp"] and flags["box_fill"] then
-            d.boxFill.Size=Vector2.new(boxW,boxH); d.boxFill.Position=Vector2.new(bx,by); d.boxFill.Visible=true
+            d.boxFill.Size=Vector2.new(boxW,boxH)
+            d.boxFill.Position=Vector2.new(bx,by)
+            d.boxFill.Color=colors.boxFill
+            d.boxFill.Transparency=colors.boxFillTr
+            d.boxFill.Visible=true
         else d.boxFill.Visible=false end
 
         if flags["name_esp"] then
-            d.nameText.Text=pl.Name; d.nameText.Position=Vector2.new(sp.X,by-14); d.nameText.Visible=true
+            d.nameText.Text=pl.Name
+            d.nameText.Position=Vector2.new(sp.X, by-14)
+            d.nameText.Visible=true
         else d.nameText.Visible=false end
 
         if flags["dist_esp"] and rootPos then
             local dist=math.round((hrp.Position-rootPos).Magnitude)
-            d.distText.Text=dist.."m"; d.distText.Position=Vector2.new(sp.X,by+boxH+3); d.distText.Visible=true
+            d.distText.Text=dist.."m"
+            d.distText.Position=Vector2.new(sp.X, by+boxH+3)
+            d.distText.Visible=true
         else d.distText.Visible=false end
 
         if flags["hp_esp"] then
             local pct  = math.clamp(h.Health/math.max(h.MaxHealth,1),0,1)
-            local hbX  = bx-6
-            local barH = boxH*pct
-            d.hpBG.Size=Vector2.new(4,boxH); d.hpBG.Position=Vector2.new(hbX,by); d.hpBG.Visible=true
+            local hbX  = bx - 6
+            local barH = boxH * pct
+            d.hpBG.Size=Vector2.new(4,boxH)
+            d.hpBG.Position=Vector2.new(hbX,by)
+            d.hpBG.Visible=true
             d.hpBar.Size=Vector2.new(4,barH)
             d.hpBar.Position=Vector2.new(hbX, by+boxH-barH)
             d.hpBar.Color = flags["hp_color_gradient"]
-                and Color3.fromRGB(math.round((1-pct)*255),math.round(pct*255),0)
+                and Color3.fromRGB(math.round((1-pct)*255), math.round(pct*255), 0)
                 or  Color3.fromRGB(0,255,0)
             d.hpBar.Visible=true
             if flags["hp_text"] then
@@ -1059,19 +1261,20 @@ RunService.RenderStepped:Connect(function()
                         or vp.Y
             d.tracer.From=Vector2.new(fromX,fromY)
             d.tracer.To=Vector2.new(sp.X,sp.Y)
-            d.tracer.Thickness=flags["tracer_thick"] or 1
+            d.tracer.Color=colors.tracer
+            d.tracer.Thickness=colors.tracerThick
             d.tracer.Visible=true
         else d.tracer.Visible=false end
 
         if flags["snap_line"] and currentTarget==pl then
             d.snapLine.From=Vector2.new(vp.X/2,vp.Y/2)
             d.snapLine.To=Vector2.new(sp.X,sp.Y)
-            d.snapLine.Thickness=flags["snap_thickness"] or 1
+            d.snapLine.Color=colors.snapLine
+            d.snapLine.Thickness=colors.snapThick
             d.snapLine.Visible=true
         else d.snapLine.Visible=false end
 
         if flags["skel_esp"] then
-            local skelCol = flags["skel_color"] or hex("#AA55EB")
             for i,pair in ipairs(SKEL_PAIRS) do
                 local p1 = c:FindFirstChild(pair[1])
                 local p2 = c:FindFirstChild(pair[2])
@@ -1080,8 +1283,10 @@ RunService.RenderStepped:Connect(function()
                     local s1,on1 = cam:WorldToViewportPoint(p1.Position)
                     local s2,on2 = cam:WorldToViewportPoint(p2.Position)
                     if on1 and on2 then
-                        ln.From=Vector2.new(s1.X,s1.Y); ln.To=Vector2.new(s2.X,s2.Y)
-                        ln.Color=skelCol; ln.Visible=true
+                        ln.From=Vector2.new(s1.X,s1.Y)
+                        ln.To=Vector2.new(s2.X,s2.Y)
+                        ln.Color=colors.skel
+                        ln.Visible=true
                     else ln.Visible=false end
                 else ln.Visible=false end
             end
@@ -1110,10 +1315,22 @@ end)
 lp.CharacterAdded:Connect(function(char)
     local h = char:WaitForChild("Humanoid")
     task.wait(0.15)
-    if flags["speed_on"]   then h.WalkSpeed = flags["walkspeed"]  or 16 end
-    if flags["jump_power"] then h.JumpPower = flags["jump_power"]        end
+    if flags["speed_on"]   then h.WalkSpeed = flags["walkspeed"] or 16 end
+    if flags["jump_power"] then h.JumpPower = flags["jump_power"]       end
     cam.FieldOfView = flags["cam_fov"] or 70
-    if flags["fly_on"] then h.PlatformStand=true end
+    if flags["fly_on"]     then h.PlatformStand = true end
+    task.wait(0.5)
+    if flags["chams_on"] then
+        for _,p in pairs(char:GetDescendants()) do
+            if p:IsA("BasePart") then
+                p:SetAttribute("__lx_mat", tostring(p.Material))
+                pcall(function()
+                    p.Material = Enum.Material[flags["chams_material"] or "Neon"]
+                    p.Color    = colors.chams
+                end)
+            end
+        end
+    end
 end)
 
 Players.PlayerAdded:Connect(function(pl)
@@ -1122,10 +1339,13 @@ Players.PlayerAdded:Connect(function(pl)
         if flags["highlight_enemies"] then
             if not char:FindFirstChild("LunarHL") then
                 local hh=Instance.new("Highlight")
-                hh.Name="LunarHL"; hh.FillColor=flags["hl_enemy_fill"] or hex("#64B4FF")
+                hh.Name="LunarHL"; hh.FillColor=colors.hlEnemy
                 hh.OutlineColor=Color3.new(1,1,1); hh.FillTransparency=0.5; hh.Parent=char
             end
         end
+
+        task.wait(0.5)
+        applyChams(pl)
     end)
 end)
 
