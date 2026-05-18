@@ -1,7 +1,9 @@
+-- made by .weound (nick) so dont fucking skid u fuckass skidder
 local library, notifications, themes = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Obelus/Library.lua"
 ))()
 
+-- ====== SERVICES ======
 local Players    = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UIS        = game:GetService("UserInputService")
@@ -16,18 +18,20 @@ local hex   = Color3.fromHex
 local flags = library.flags
 local dim2  = UDim2.new
 
+-- ====== HELPERS ======
 local function getChar() return lp.Character end
 local function getHum()  local c = getChar(); return c and c:FindFirstChildOfClass("Humanoid") end
 local function getRoot() local c = getChar(); return c and c:FindFirstChild("HumanoidRootPart") end
 
+-- ====== LIGHTING ORIGINALS ======
 local origAmbient    = Lighting.Ambient
 local origBrightness = Lighting.Brightness
 local origFogEnd     = Lighting.FogEnd
 local origFogStart   = Lighting.FogStart
-
 local desiredBrightness = Lighting.Brightness
 local desiredClockTime  = Lighting.ClockTime
 
+-- ====== SKELETON PAIRS ======
 local SKEL_PAIRS = {
     {"Head","UpperTorso"},
     {"UpperTorso","LowerTorso"},
@@ -45,6 +49,7 @@ local SKEL_PAIRS = {
     {"RightLowerLeg","RightFoot"},
 }
 
+-- ====== COLOR TABLE ======
 local colors = {
     box         = hex("#64B4FF"),
     boxFill     = hex("#64B4FF"),
@@ -61,12 +66,14 @@ local colors = {
     chams       = hex("#64B4FF"),
 }
 
+-- ====== DRAWING UTIL ======
 local function newDraw(t, props)
     local d = Drawing.new(t)
     for k, v in pairs(props) do d[k] = v end
     return d
 end
 
+-- ====== CROSSHAIR ======
 local xhairLines = {
     top    = newDraw("Line",   {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
     bottom = newDraw("Line",   {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
@@ -80,6 +87,7 @@ local fovCircle = newDraw("Circle", {
     Visible=false, Color=Color3.new(1,1,1), Radius=150,
 })
 
+-- ====== PLAYER ESP OBJECTS ======
 local espObjects = {}
 
 local function buildESP(pl)
@@ -124,18 +132,75 @@ for _, pl in pairs(Players:GetPlayers()) do buildESP(pl) end
 Players.PlayerAdded:Connect(buildESP)
 Players.PlayerRemoving:Connect(destroyESP)
 
+-- ====== PICKUP ESP (Drawing-based, much better than BillboardGui) ======
+local pickupESPObjects  = {}
+local pickupESPEnabled  = {ammo=false, hp=false}
+
+local function cleanupPickupESP()
+    for obj, d in pairs(pickupESPObjects) do
+        if not obj or not obj.Parent then
+            pcall(function()
+                d.text:Remove()
+                for _, l in pairs(d.lines) do l:Remove() end
+            end)
+            pickupESPObjects[obj] = nil
+        end
+    end
+end
+
+local function buildPickupESPFor(obj)
+    if pickupESPObjects[obj] then return end
+    local isAmmo = obj.Name == "DeadAmmo"
+    local col    = isAmmo and hex("#64B4FF") or hex("#00FF88")
+    local lines  = {}
+    for i = 1, 8 do
+        lines[i] = newDraw("Line", {Thickness=1, Visible=false, Color=col})
+    end
+    pickupESPObjects[obj] = {
+        text  = newDraw("Text", {
+            Size=12, Center=true, Outline=true, Visible=false,
+            Color=col, Font=2,
+            Text = isAmmo and "[ AMMO BOX ]" or "[ HP JUG ]",
+        }),
+        dist  = newDraw("Text", {
+            Size=10, Center=true, Outline=true, Visible=false,
+            Color=Color3.fromRGB(200,200,200), Font=2,
+        }),
+        lines = lines,
+        color = col,
+    }
+end
+
+local function refreshPickupESP()
+    cleanupPickupESP()
+    local debris = Workspace:FindFirstChild("Debris")
+    if not debris then return end
+    for _, v in pairs(debris:GetChildren()) do
+        local isAmmo = v.Name == "DeadAmmo" and pickupESPEnabled.ammo
+        local isHP   = v.Name == "DeadHP"   and pickupESPEnabled.hp
+        if isAmmo or isHP then
+            buildPickupESPFor(v)
+        end
+    end
+end
+
+-- ====== CHAMS (FIX: proper save/restore using attributes + color save) ======
 local function applyChams(pl)
-    if not flags["chams_on"] then return end
     if pl == lp then return end
     local c = pl.Character
     if not c then return end
+    local mat = Enum.Material[flags["chams_material"] or "Neon"]
     for _, p in pairs(c:GetDescendants()) do
         if p:IsA("BasePart") then
-            if not p:GetAttribute("__lx_mat") then
-                p:SetAttribute("__lx_mat", tostring(p.Material))
-            end
             pcall(function()
-                p.Material = Enum.Material[flags["chams_material"] or "Neon"]
+                -- Save original values only once
+                if not p:GetAttribute("__lx_mat") then
+                    p:SetAttribute("__lx_mat",  p.Material.Name)
+                    p:SetAttribute("__lx_colR", p.Color.R)
+                    p:SetAttribute("__lx_colG", p.Color.G)
+                    p:SetAttribute("__lx_colB", p.Color.B)
+                end
+                p.Material = mat
                 p.Color    = colors.chams
             end)
         end
@@ -147,19 +212,155 @@ local function removeChams(pl)
     if not c then return end
     for _, p in pairs(c:GetDescendants()) do
         if p:IsA("BasePart") then
-            local m = p:GetAttribute("__lx_mat")
-            if m then
-                pcall(function()
+            pcall(function()
+                local m  = p:GetAttribute("__lx_mat")
+                local cr = p:GetAttribute("__lx_colR")
+                local cg = p:GetAttribute("__lx_colG")
+                local cb = p:GetAttribute("__lx_colB")
+                if m then
                     p.Material = Enum.Material[m]
-                    p:SetAttribute("__lx_mat", nil)
-                end)
-            end
+                    p:SetAttribute("__lx_mat",  nil)
+                end
+                if cr ~= nil and cg ~= nil and cb ~= nil then
+                    p.Color = Color3.new(cr, cg, cb)
+                    p:SetAttribute("__lx_colR", nil)
+                    p:SetAttribute("__lx_colG", nil)
+                    p:SetAttribute("__lx_colB", nil)
+                end
+            end)
         end
     end
 end
 
-local silentAimTarget = nil
+local function reapplyAllChams()
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl ~= lp then
+            if flags["chams_on"] then applyChams(pl) else removeChams(pl) end
+        end
+    end
+end
 
+local hitboxOrigSizes = {}
+local HITBOX_PARTS    = {"Head","UpperTorso","LowerTorso","HumanoidRootPart","LeftUpperArm","RightUpperArm","LeftUpperLeg","RightUpperLeg"}
+
+local function expandHitbox(pl)
+    if pl == lp then return end
+    local c = pl.Character
+    if not c then return end
+    if not hitboxOrigSizes[pl] then hitboxOrigSizes[pl] = {} end
+    local sz = flags["hitbox_size"] or 8
+    for _, partName in ipairs(HITBOX_PARTS) do
+        local part = c:FindFirstChild(partName)
+        if part and part:IsA("BasePart") then
+            if not hitboxOrigSizes[pl][partName] then
+                hitboxOrigSizes[pl][partName] = part.Size
+            end
+            pcall(function() part.Size = Vector3.new(sz, sz, sz) end)
+        end
+    end
+end
+
+local function restoreHitbox(pl)
+    local data = hitboxOrigSizes[pl]
+    if not data then return end
+    local c = pl and pl.Character
+    if c then
+        for partName, origSize in pairs(data) do
+            local part = c:FindFirstChild(partName)
+            if part and part:IsA("BasePart") then
+                pcall(function() part.Size = origSize end)
+            end
+        end
+    end
+    hitboxOrigSizes[pl] = nil
+end
+
+local function updateAllHitboxes()
+    local active = flags["hitbox_on"] or flags["silent_aim"]
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl ~= lp then
+            if active then expandHitbox(pl) else restoreHitbox(pl) end
+        end
+    end
+end
+
+-- Hitbox continuous enforcement loop
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if flags["hitbox_on"] or flags["silent_aim"] then
+            updateAllHitboxes()
+        end
+    end
+end)
+
+-- ====== SILENT AIM IMPLEMENTATION ======
+-- Dual approach:
+--   1) __namecall hook redirects FindPartOnRayWithIgnoreList to closest enemy part
+--      (open-source pattern by community, standard for Arsenal)
+--   2) __index hook redirects Mouse.Hit / Mouse.Target
+-- Silent Aim also enables hitbox expansion for maximum hit registration
+
+local silentAimTarget   = nil   -- used by __index hook
+local silentAimBodyPart = nil   -- used by __namecall hook + RenderStep finder
+
+-- RenderStep: find closest body part from cursor for __namecall redirect
+local function findClosestPartFromCursor()
+    local mousePos    = UIS:GetMouseLocation()
+    local closestDist = math.huge
+    local closest     = nil
+
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl == lp then continue end
+        if flags["aim_team_check"] and pl.Team == lp.Team then continue end
+        local c = pl.Character
+        local h = c and c:FindFirstChildOfClass("Humanoid")
+        if not (c and h and h.Health > 0) then continue end
+
+        for _, part in pairs(c:GetChildren()) do
+            if part:IsA("BasePart") then
+                local sp, onScreen = cam:WorldToViewportPoint(part.Position)
+                if onScreen then
+                    local dist = (Vector2.new(sp.X, sp.Y) - mousePos).Magnitude
+                    if dist < closestDist then
+                        closestDist = dist
+                        closest     = part
+                    end
+                end
+            end
+        end
+    end
+
+    silentAimBodyPart = closest
+end
+
+RunService:BindToRenderStep("__lx_silentPartFinder", 120, function()
+    if flags["silent_aim"] then
+        findClosestPartFromCursor()
+    else
+        silentAimBodyPart = nil
+    end
+end)
+
+-- __namecall hook: redirect ray-based shooting to closest part
+-- Source: open-source community pattern for Arsenal silent aim
+local oldNameCall
+oldNameCall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+    local method = getnamecallmethod()
+    local args   = {...}
+    if not checkcaller() and flags["silent_aim"] and silentAimBodyPart and silentAimBodyPart.Parent then
+        if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" then
+            args[1] = Ray.new(
+                cam.CFrame.Position,
+                (silentAimBodyPart.Position - cam.CFrame.Position).Unit * 600
+            )
+            return oldNameCall(self, unpack(args))
+        end
+    end
+    return oldNameCall(self, ...)
+end))
+
+-- __index hook: redirect Mouse.Hit / Mouse.Target / Mouse.UnitRay
 local oldIndex
 oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
     if not checkcaller() then
@@ -172,13 +373,15 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
                 local h = t.Character:FindFirstChildOfClass("Humanoid")
                 if h and h.Health > 0 then
                     local part = t.Character:FindFirstChild(flags["aim_part"] or "Head")
+                        or t.Character:FindFirstChild("HumanoidRootPart")
                     if part then
                         if key == "Hit"     then return CFrame.new(part.Position) end
                         if key == "Target"  then return part end
                         if key == "UnitRay" then
-                            local origin = cam.CFrame.Position
-                            local dir    = (part.Position - origin).Unit
-                            return Ray.new(origin, dir * 1000)
+                            return Ray.new(
+                                cam.CFrame.Position,
+                                (part.Position - cam.CFrame.Position).Unit * 1000
+                            )
                         end
                     end
                 end
@@ -188,6 +391,59 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
     return oldIndex(self, key)
 end))
 
+-- ====== COLOR SKINS (ported from open-source AdvanceTech Arsenal script) ======
+local skinColors = {arm=Color3.fromRGB(50,50,50), gun=Color3.fromRGB(50,50,50)}
+local skinMats   = {arm="Plastic", gun="Plastic"}
+local armSkinOn  = false
+local gunSkinOn  = false
+local rainbowOn  = false
+local rainbowHue = 0
+
+local function applyArmSkin()
+    local arms = Workspace.Camera:FindFirstChild("Arms")
+    if not arms then return end
+    for _, v in pairs(arms:GetDescendants()) do
+        if v:IsA("BasePart") and (v.Name == "Right Arm" or v.Name == "Left Arm"
+            or v.Name == "RightHand" or v.Name == "LeftHand"
+            or v.Name == "RightArm"  or v.Name == "LeftArm") then
+            pcall(function()
+                v.Material = Enum.Material[skinMats.arm]
+                v.Color    = skinColors.arm
+            end)
+        end
+    end
+end
+
+local function applyGunSkin()
+    local arms = Workspace.Camera:FindFirstChild("Arms")
+    if not arms then return end
+    for _, v in pairs(arms:GetDescendants()) do
+        if v:IsA("MeshPart") then
+            pcall(function()
+                v.Material = Enum.Material[skinMats.gun]
+                v.Color    = skinColors.gun
+            end)
+        end
+    end
+end
+
+RunService.RenderStepped:Connect(function()
+    if armSkinOn then applyArmSkin() end
+    if gunSkinOn and not rainbowOn then applyGunSkin() end
+    if rainbowOn then
+        rainbowHue = (rainbowHue + 0.005) % 1
+        local arms = Workspace.Camera:FindFirstChild("Arms")
+        if arms then
+            for _, v in pairs(arms:GetDescendants()) do
+                if v:IsA("MeshPart") then
+                    pcall(function() v.Color = Color3.fromHSV(rainbowHue, 1, 1) end)
+                end
+            end
+        end
+    end
+end)
+
+-- ====== WINDOW ======
 local window = library:window({
     name = os.date('<font color="rgb(100,180,255)">lunar x</font> | <font color="rgb(170,85,235)">arsenal</font> | %b %d %Y'),
     size = dim2(0, 540, 0, 580),
@@ -203,19 +459,33 @@ local PlayerTab   = window:tab({name="Player"  })
 local MiscTab     = window:tab({name="Misc"    })
 local SettingsTab = window:tab({name="Settings"})
 
+-- ====== AIMBOT TAB ======
 do
     local c1 = AimbotTab:column({fill=true})
     local c2 = AimbotTab:column({fill=true})
 
     local sec = c1:section({name="Aimbot"})
-    sec:addToggle({name="Aimbot",      flag="aim_on",         default=false, callback=function()end})
-       :addKeyBind({flag="aim_key",    key=Enum.KeyCode.E,    mode="hold",   callback=function()end})
-    sec:addToggle({name="Silent Aim",  flag="silent_aim",     default=false, callback=function()end})
-    sec:addToggle({name="Trigger Bot", flag="triggerbot",     default=false, callback=function()end})
-       :addKeyBind({flag="trigger_key",key=Enum.KeyCode.Q,    mode="hold",   callback=function()end})
-    sec:addToggle({name="Team Check",  flag="aim_team_check", default=false, callback=function()end})
-    sec:addToggle({name="Prediction",  flag="aim_prediction", default=false, callback=function()end})
-    sec:addToggle({name="Wallbang",    flag="wallbang",       default=false, callback=function()end})
+    sec:addToggle({name="Aimbot",      flag="aim_on",         default=false, callback=function() end})
+       :addKeyBind({flag="aim_key",    key=Enum.KeyCode.E,    mode="hold",   callback=function() end})
+
+    -- Silent Aim = hitbox expand + ray/mouse redirect (dual method)
+    sec:addToggle({name="Silent Aim",  flag="silent_aim",     default=false,
+        callback=function(v)
+            if v then
+                updateAllHitboxes()
+                notifications:create_notification({name="silent aim on"})
+            else
+                for _, pl in pairs(Players:GetPlayers()) do restoreHitbox(pl) end
+                silentAimBodyPart = nil
+                silentAimTarget   = nil
+            end
+        end})
+
+    sec:addToggle({name="Trigger Bot", flag="triggerbot",     default=false, callback=function() end})
+       :addKeyBind({flag="trigger_key",key=Enum.KeyCode.Q,    mode="hold",   callback=function() end})
+    sec:addToggle({name="Team Check",  flag="aim_team_check", default=false, callback=function() end})
+    sec:addToggle({name="Prediction",  flag="aim_prediction", default=false, callback=function() end})
+    sec:addToggle({name="Wallbang",    flag="wallbang",       default=false, callback=function() end})
     sec:addToggle({name="Rage Mode",   flag="rage_mode",      default=false,
         callback=function(v)
             if v then notifications:create_notification({name="rage mode on"}) end
@@ -224,10 +494,10 @@ do
     local cfg = c1:section({name="Aim Config"})
     cfg:addDropdown({name="Target Part", flag="aim_part",
         items={"Head","HumanoidRootPart","UpperTorso","LowerTorso","LeftArm","RightArm"},
-        default="Head", callback=function()end})
+        default="Head", callback=function() end})
     cfg:addDropdown({name="Priority", flag="aim_priority",
         items={"Nearest Mouse","Nearest Distance","Lowest HP","Line of Sight"},
-        default="Nearest Mouse", callback=function()end})
+        default="Nearest Mouse", callback=function() end})
     cfg:addSlider({name="Smoothness",   flag="aim_smooth",    min=0.01,max=1,   default=0.15, interval=0.01,suffix="x"})
     cfg:addSlider({name="Max Distance", flag="aim_max_dist",  min=50,  max=2000,default=500,  interval=10,  suffix=" st"})
     cfg:addSlider({name="Hit Chance",   flag="aim_hit_chance",min=1,   max=100, default=100,  interval=1,   suffix="%"})
@@ -235,34 +505,44 @@ do
 
     local fovSec = c2:section({name="FOV Circle"})
     fovSec:addToggle({name="Visible", flag="fov_visible", default=false,
-        callback=function(v) fovCircle.Visible=v end})
+        callback=function(v) fovCircle.Visible = v end})
     fovSec:addToggle({name="Filled",  flag="fov_filled",  default=false,
-        callback=function(v) fovCircle.Filled=v end})
+        callback=function(v) fovCircle.Filled = v end})
     fovSec:addLabel({name="FOV Color"}):addColorPicker({flag="fov_color",
         color=Color3.new(1,1,1),
         callback=function(c,a)
-            colors.fov = c
-            colors.fovTr = a
-            fovCircle.Color = c
-            fovCircle.Transparency = a
+            colors.fov = c; colors.fovTr = a
+            fovCircle.Color = c; fovCircle.Transparency = a
         end})
     fovSec:addSlider({name="Radius",    flag="fov_radius",    min=10,max=600,default=150,interval=5,  suffix="px",
-        callback=function(v) fovCircle.Radius=v end})
+        callback=function(v) fovCircle.Radius = v end})
     fovSec:addSlider({name="Thickness", flag="fov_thickness", min=1, max=5,  default=1,  interval=1,  suffix="px",
-        callback=function(v) fovCircle.Thickness=v end})
+        callback=function(v) fovCircle.Thickness = v end})
+
+    -- Hitbox expander (also acts as silent aim backbone)
+    local hbSec = c2:section({name="Hitbox Expander"})
+    hbSec:addToggle({name="Hitbox Expander", flag="hitbox_on", default=false,
+        callback=function(v)
+            if v then updateAllHitboxes()
+            else for _, pl in pairs(Players:GetPlayers()) do restoreHitbox(pl) end end
+        end})
+    hbSec:addSlider({name="Hitbox Size", flag="hitbox_size", min=1,max=60,default=8,interval=0.5,suffix=" st",
+        callback=function()
+            if flags["hitbox_on"] or flags["silent_aim"] then updateAllHitboxes() end
+        end})
 
     local indSec = c2:section({name="Target Indicator"})
-    local snapT = indSec:addToggle({name="Snap Line", flag="snap_line", default=false, folding=true, callback=function()end})
+    local snapT = indSec:addToggle({name="Snap Line", flag="snap_line", default=false, folding=true, callback=function() end})
     snapT:addColorPicker({flag="snap_line_color", color=hex("#64B4FF"),
         callback=function(c,a)
             colors.snapLine = c
-            for _,d in pairs(espObjects) do d.snapLine.Color=c end
+            for _, d in pairs(espObjects) do d.snapLine.Color = c end
         end})
     snapT:addSlider({name="Thickness", flag="snap_thickness", min=1,max=5,default=1,interval=1,suffix="px",
-        callback=function(v) colors.snapThick=v end})
+        callback=function(v) colors.snapThick = v end})
 
     local trigSec = c2:section({name="Trigger Config"})
-    trigSec:addSlider({name="Trigger Delay", flag="trigger_delay", min=0.01,max=0.5,default=0.08,interval=0.01,suffix="s"})
+    trigSec:addSlider({name="Trigger Delay", flag="trigger_delay", min=0.0001,max=0.5,default=0.01,interval=0.0001,suffix="s"})
     trigSec:addSlider({name="Trigger FOV",   flag="trigger_fov",   min=1,   max=300,default=80,  interval=1,  suffix="px"})
 end
 
@@ -271,73 +551,105 @@ do
     local c2 = VisualsTab:column({fill=true})
 
     local espSec = c1:section({name="Player ESP"})
-    espSec:addToggle({name="ESP Enabled",  flag="esp_on",       default=false, callback=function()end})
+    espSec:addToggle({name="ESP Enabled",  flag="esp_on",       default=false, callback=function() end})
     espSec:addSlider({name="Max Distance", flag="esp_max_dist", min=50,max=3000,default=800,interval=50,suffix=" st"})
     espSec:addDropdown({name="Box Style",  flag="box_style",
-        items={"None","Full Box","Corner Box"}, default="Corner Box", callback=function()end})
+        items={"None","Full Box","Corner Box"}, default="Corner Box", callback=function() end})
 
-    local boxT = espSec:addToggle({name="Box ESP", flag="box_esp", default=true, folding=true, callback=function()end})
+    local boxT = espSec:addToggle({name="Box ESP", flag="box_esp", default=true, folding=true, callback=function() end})
     boxT:addColorPicker({flag="box_color", color=hex("#64B4FF"),
         callback=function(c,a)
             colors.box = c
-            for _,d in pairs(espObjects) do
-                d.box.Color=c
-                for _,l in pairs(d.corners) do l.Color=c end
+            for _, d in pairs(espObjects) do
+                d.box.Color = c
+                for _, l in pairs(d.corners) do l.Color = c end
             end
         end})
-    boxT:addToggle({name="Filled", flag="box_fill", default=false, callback=function()end})
+    boxT:addToggle({name="Filled", flag="box_fill", default=false, callback=function() end})
     boxT:addColorPicker({flag="box_fill_color", color=hex("#64B4FF"), alpha=0.6,
         callback=function(c,a)
-            colors.boxFill   = c
-            colors.boxFillTr = 1 - a
-            for _,d in pairs(espObjects) do
-                d.boxFill.Color=c
-                d.boxFill.Transparency=1-a
+            colors.boxFill = c; colors.boxFillTr = 1 - a
+            for _, d in pairs(espObjects) do
+                d.boxFill.Color = c; d.boxFill.Transparency = 1 - a
             end
         end})
 
-    local tracerT = espSec:addToggle({name="Tracers", flag="tracers_on", default=false, folding=true, callback=function()end})
+    local tracerT = espSec:addToggle({name="Tracers", flag="tracers_on", default=false, folding=true, callback=function() end})
     tracerT:addColorPicker({flag="tracer_color", color=Color3.new(1,1,1),
         callback=function(c,a)
             colors.tracer = c
-            for _,d in pairs(espObjects) do d.tracer.Color=c end
+            for _, d in pairs(espObjects) do d.tracer.Color = c end
         end})
     tracerT:addDropdown({name="Origin", flag="tracer_origin",
-        items={"Bottom","Center","Top","Mouse"}, default="Bottom", callback=function()end})
+        items={"Bottom","Center","Top","Mouse"}, default="Bottom", callback=function() end})
     tracerT:addSlider({name="Thickness", flag="tracer_thick", min=1,max=4,default=1,interval=1,suffix="px",
-        callback=function(v) colors.tracerThick=v end})
+        callback=function(v) colors.tracerThick = v end})
 
-    espSec:addToggle({name="Name ESP",     flag="name_esp", default=false, callback=function()end})
-    espSec:addToggle({name="Distance ESP", flag="dist_esp", default=false, callback=function()end})
+    espSec:addToggle({name="Name ESP",     flag="name_esp", default=false, callback=function() end})
+    espSec:addToggle({name="Distance ESP", flag="dist_esp", default=false, callback=function() end})
 
-    local hpT = espSec:addToggle({name="Health Bar", flag="hp_esp", default=false, folding=true, callback=function()end})
-    hpT:addToggle({name="Color by HP",  flag="hp_color_gradient", default=true,  callback=function()end})
-    hpT:addToggle({name="Show HP Text", flag="hp_text",           default=false, callback=function()end})
+    local hpT = espSec:addToggle({name="Health Bar", flag="hp_esp", default=false, folding=true, callback=function() end})
+    hpT:addToggle({name="Color by HP",  flag="hp_color_gradient", default=true,  callback=function() end})
+    hpT:addToggle({name="Show HP Text", flag="hp_text",           default=false, callback=function() end})
 
-    local skelT = espSec:addToggle({name="Skeleton ESP", flag="skel_esp", default=false, folding=true, callback=function()end})
+    local skelT = espSec:addToggle({name="Skeleton ESP", flag="skel_esp", default=false, folding=true, callback=function() end})
     skelT:addColorPicker({flag="skel_color", color=hex("#AA55EB"),
         callback=function(c,a)
             colors.skel = c
-            for _,d in pairs(espObjects) do
-                for _,l in pairs(d.skeleton) do l.Color=c end
+            for _, d in pairs(espObjects) do
+                for _, l in pairs(d.skeleton) do l.Color = c end
             end
         end})
 
+    local pickupSec = c1:section({name="Pickup ESP"})
+    pickupSec:addToggle({name="Ammo Box ESP", flag="ammo_box_esp", default=false,
+        callback=function(v)
+            pickupESPEnabled.ammo = v
+            if not v then
+                for obj, d in pairs(pickupESPObjects) do
+                    if obj and obj.Name == "DeadAmmo" then
+                        pcall(function()
+                            d.text:Remove(); d.dist:Remove()
+                            for _, l in pairs(d.lines) do l:Remove() end
+                        end)
+                        pickupESPObjects[obj] = nil
+                    end
+                end
+            end
+        end})
+    pickupSec:addToggle({name="HP Jug ESP", flag="hp_jug_esp", default=false,
+        callback=function(v)
+            pickupESPEnabled.hp = v
+            if not v then
+                for obj, d in pairs(pickupESPObjects) do
+                    if obj and obj.Name == "DeadHP" then
+                        pcall(function()
+                            d.text:Remove(); d.dist:Remove()
+                            for _, l in pairs(d.lines) do l:Remove() end
+                        end)
+                        pickupESPObjects[obj] = nil
+                    end
+                end
+            end
+        end})
+
+    -- Crosshair
     local xhairSec = c1:section({name="Custom Crosshair"})
     xhairSec:addToggle({name="Crosshair", flag="xhair_on", default=false,
         callback=function(v)
-            if not v then for _,l in pairs(xhairLines) do l.Visible=false end end
+            if not v then for _, l in pairs(xhairLines) do l.Visible = false end end
         end})
     xhairSec:addSlider({name="Size",      flag="xhair_size",  min=2, max=30,default=10,interval=1,suffix="px"})
     xhairSec:addSlider({name="Gap",       flag="xhair_gap",   min=0, max=15,default=3, interval=1,suffix="px"})
     xhairSec:addSlider({name="Thickness", flag="xhair_thick", min=1, max=5, default=2, interval=1,suffix="px"})
-    xhairSec:addToggle({name="Dot",       flag="xhair_dot",   default=true, callback=function()end})
+    xhairSec:addToggle({name="Dot",       flag="xhair_dot",   default=true, callback=function() end})
     xhairSec:addLabel({name="Color"}):addColorPicker({flag="xhair_color", color=Color3.new(1,1,1),
         callback=function(c,a)
             colors.xhair = c
-            for _,l in pairs(xhairLines) do l.Color=c end
+            for _, l in pairs(xhairLines) do l.Color = c end
         end})
 
+    -- World
     local worldSec = c2:section({name="World"})
     worldSec:addToggle({name="Fullbright", flag="fullbright", default=false,
         callback=function(v)
@@ -359,13 +671,15 @@ do
         callback=function(v)
             local atmo = Lighting:FindFirstChildOfClass("Atmosphere")
             if atmo then atmo.Density = v and 0 or 0.395 end
-            for _,obj in pairs(Workspace:GetDescendants()) do
+            for _, obj in pairs(Workspace:GetDescendants()) do
                 if obj:IsA("ParticleEmitter") or obj:IsA("Smoke")
-                or obj:IsA("Fire")            or obj:IsA("Sparkles") then
+                    or obj:IsA("Fire") or obj:IsA("Sparkles") then
                     obj.Enabled = not v
                 end
             end
         end})
+
+    -- FIX: brightness/time sliders now store desired values and work independently of fullbright
     worldSec:addSlider({name="Brightness", flag="world_brightness", min=0,max=5,default=1,interval=0.1,suffix="x",
         callback=function(v)
             desiredBrightness = v
@@ -380,14 +694,14 @@ do
     local hlSec = c2:section({name="Highlights"})
     hlSec:addToggle({name="Highlight Enemies", flag="highlight_enemies", default=false,
         callback=function(v)
-            for _,pl in pairs(Players:GetPlayers()) do
+            for _, pl in pairs(Players:GetPlayers()) do
                 if pl ~= lp and pl.Character then
                     local ex = pl.Character:FindFirstChild("LunarHL")
                     if v and not ex then
                         local h = Instance.new("Highlight")
-                        h.Name="LunarHL"; h.FillColor=colors.hlEnemy
-                        h.OutlineColor=Color3.new(1,1,1); h.FillTransparency=0.5
-                        h.Parent=pl.Character
+                        h.Name = "LunarHL"; h.FillColor = colors.hlEnemy
+                        h.OutlineColor = Color3.new(1,1,1); h.FillTransparency = 0.5
+                        h.Parent = pl.Character
                     elseif not v and ex then ex:Destroy() end
                 end
             end
@@ -395,10 +709,10 @@ do
     hlSec:addColorPicker({flag="hl_enemy_fill", color=hex("#64B4FF"),
         callback=function(c,a)
             colors.hlEnemy = c
-            for _,pl in pairs(Players:GetPlayers()) do
+            for _, pl in pairs(Players:GetPlayers()) do
                 if pl ~= lp and pl.Character then
                     local ex = pl.Character:FindFirstChild("LunarHL")
-                    if ex then ex.FillColor=c end
+                    if ex then ex.FillColor = c end
                 end
             end
         end})
@@ -408,36 +722,56 @@ do
             local ex = c:FindFirstChild("LunarSelfHL")
             if v and not ex then
                 local h = Instance.new("Highlight")
-                h.Name="LunarSelfHL"; h.FillColor=hex("#AA55EB")
-                h.OutlineColor=Color3.new(1,1,1); h.FillTransparency=0.6; h.Parent=c
+                h.Name = "LunarSelfHL"; h.FillColor = hex("#AA55EB")
+                h.OutlineColor = Color3.new(1,1,1); h.FillTransparency = 0.6; h.Parent = c
             elseif not v and ex then ex:Destroy() end
         end})
 
+    -- FIX: Chams fully rewritten to actually work
     local chamsSec = c2:section({name="Chams"})
     local chamsT = chamsSec:addToggle({name="Chams", flag="chams_on", default=false, folding=true,
         callback=function(v)
-            if v then
-                for _,pl in pairs(Players:GetPlayers()) do applyChams(pl) end
-            else
-                for _,pl in pairs(Players:GetPlayers()) do removeChams(pl) end
-            end
+            if v then reapplyAllChams() else for _, pl in pairs(Players:GetPlayers()) do removeChams(pl) end end
         end})
     chamsT:addDropdown({name="Material", flag="chams_material",
-        items={"Neon","ForceField","SmoothPlastic"}, default="Neon",
+        items={"Neon","ForceField","SmoothPlastic","Glass"}, default="Neon",
         callback=function()
             if flags["chams_on"] then
-                for _,pl in pairs(Players:GetPlayers()) do applyChams(pl) end
+                for _, pl in pairs(Players:GetPlayers()) do
+                    removeChams(pl); task.wait(); applyChams(pl)
+                end
             end
         end})
     chamsT:addColorPicker({flag="chams_color", color=hex("#64B4FF"),
         callback=function(c,a)
             colors.chams = c
-            if flags["chams_on"] then
-                for _,pl in pairs(Players:GetPlayers()) do applyChams(pl) end
-            end
+            if flags["chams_on"] then reapplyAllChams() end
         end})
+
+    -- Color Skins (ported from AdvanceTech open-source Arsenal script)
+    local skinsSec = c2:section({name="Color Skins"})
+
+    local armT = skinsSec:addToggle({name="Arm Charms", flag="arm_charm", default=false, folding=true,
+        callback=function(v) armSkinOn = v end})
+    armT:addDropdown({name="Arm Material", flag="arm_mat",
+        items={"Plastic","Neon","ForceField","Wood","Grass","SmoothPlastic"}, default="Plastic",
+        callback=function(v) skinMats.arm = v end})
+    armT:addColorPicker({flag="arm_color", color=Color3.fromRGB(50,50,50),
+        callback=function(c,a) skinColors.arm = c end})
+
+    local gunT = skinsSec:addToggle({name="Gun Charms", flag="gun_charm", default=false, folding=true,
+        callback=function(v) gunSkinOn = v end})
+    gunT:addDropdown({name="Gun Material", flag="gun_mat",
+        items={"Plastic","Neon","ForceField","Wood","Grass","SmoothPlastic"}, default="Plastic",
+        callback=function(v) skinMats.gun = v end})
+    gunT:addColorPicker({flag="gun_color", color=Color3.fromRGB(50,50,50),
+        callback=function(c,a) skinColors.gun = c end})
+
+    skinsSec:addToggle({name="Rainbow Gun", flag="rainbow_gun", default=false,
+        callback=function(v) rainbowOn = v; rainbowHue = 0 end})
 end
 
+-- ====== MOVEMENT TAB ======
 do
     local c1 = MovementTab:column({fill=true})
     local c2 = MovementTab:column({fill=true})
@@ -445,70 +779,70 @@ do
     local speedSec = c1:section({name="Speed"})
     speedSec:addToggle({name="Speed Hack", flag="speed_on", default=false,
         callback=function(v)
-            local h=getHum(); if h then h.WalkSpeed=v and (flags["walkspeed"] or 16) or 16 end
+            local h = getHum(); if h then h.WalkSpeed = v and (flags["walkspeed"] or 16) or 16 end
         end})
     speedSec:addSlider({name="WalkSpeed", flag="walkspeed", min=8,max=500,default=16,interval=1,suffix=" ws",
         callback=function(v)
-            if flags["speed_on"] then local h=getHum(); if h then h.WalkSpeed=v end end
+            if flags["speed_on"] then local h = getHum(); if h then h.WalkSpeed = v end end
         end})
 
     local jumpSec = c1:section({name="Jump"})
-    jumpSec:addToggle({name="Infinite Jump", flag="inf_jump", default=false, callback=function()end})
+    jumpSec:addToggle({name="Infinite Jump", flag="inf_jump", default=false, callback=function() end})
     jumpSec:addSlider({name="JumpPower", flag="jump_power", min=7,max=500,default=50,interval=1,suffix=" jp",
-        callback=function(v) local h=getHum(); if h then h.JumpPower=v end end})
+        callback=function(v) local h = getHum(); if h then h.JumpPower = v end end})
 
     local gravSec = c1:section({name="Gravity"})
     gravSec:addToggle({name="Custom Gravity", flag="custom_gravity", default=false,
-        callback=function(v) Workspace.Gravity=v and (flags["gravity_val"] or 50) or 196.2 end})
+        callback=function(v) Workspace.Gravity = v and (flags["gravity_val"] or 50) or 196.2 end})
     gravSec:addSlider({name="Gravity", flag="gravity_val", min=1,max=400,default=50,interval=1,suffix=" g",
-        callback=function(v) if flags["custom_gravity"] then Workspace.Gravity=v end end})
+        callback=function(v) if flags["custom_gravity"] then Workspace.Gravity = v end end})
 
     local flyConn, bodyVel, bodyGyro
 
     local function stopFly()
-        if flyConn  then flyConn:Disconnect();  flyConn=nil  end
-        if bodyVel  then bodyVel:Destroy();     bodyVel=nil  end
-        if bodyGyro then bodyGyro:Destroy();    bodyGyro=nil end
+        if flyConn  then flyConn:Disconnect();  flyConn  = nil end
+        if bodyVel  then bodyVel:Destroy();     bodyVel  = nil end
+        if bodyGyro then bodyGyro:Destroy();    bodyGyro = nil end
     end
 
     local function startFly()
         stopFly()
-        local r=getRoot(); if not r then return end
-        bodyVel=Instance.new("BodyVelocity")
-        bodyVel.Velocity=Vector3.zero
-        bodyVel.MaxForce=Vector3.new(1e5,1e5,1e5)
-        bodyVel.Parent=r
-        bodyGyro=Instance.new("BodyGyro")
-        bodyGyro.MaxTorque=Vector3.new(1e5,1e5,1e5)
-        bodyGyro.P=1e4
-        bodyGyro.Parent=r
-        flyConn=RunService.RenderStepped:Connect(function()
+        local r = getRoot(); if not r then return end
+        bodyVel = Instance.new("BodyVelocity")
+        bodyVel.Velocity  = Vector3.zero
+        bodyVel.MaxForce  = Vector3.new(1e5,1e5,1e5)
+        bodyVel.Parent    = r
+        bodyGyro = Instance.new("BodyGyro")
+        bodyGyro.MaxTorque = Vector3.new(1e5,1e5,1e5)
+        bodyGyro.P         = 1e4
+        bodyGyro.Parent    = r
+        flyConn = RunService.RenderStepped:Connect(function()
             if not flags["fly_on"] then stopFly(); return end
-            local r2=getRoot(); if not r2 then stopFly(); return end
-            local dir=Vector3.zero
-            if UIS:IsKeyDown(Enum.KeyCode.W)           then dir+=cam.CFrame.LookVector  end
-            if UIS:IsKeyDown(Enum.KeyCode.S)           then dir-=cam.CFrame.LookVector  end
-            if UIS:IsKeyDown(Enum.KeyCode.A)           then dir-=cam.CFrame.RightVector end
-            if UIS:IsKeyDown(Enum.KeyCode.D)           then dir+=cam.CFrame.RightVector end
-            if UIS:IsKeyDown(Enum.KeyCode.Space)       then dir+=Vector3.new(0,1,0)     end
-            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir-=Vector3.new(0,1,0)     end
-            bodyVel.Velocity=dir.Magnitude>0 and dir.Unit*(flags["fly_speed"] or 60) or Vector3.zero
-            bodyGyro.CFrame=cam.CFrame
+            local r2 = getRoot(); if not r2 then stopFly(); return end
+            local dir = Vector3.zero
+            if UIS:IsKeyDown(Enum.KeyCode.W)           then dir += cam.CFrame.LookVector  end
+            if UIS:IsKeyDown(Enum.KeyCode.S)           then dir -= cam.CFrame.LookVector  end
+            if UIS:IsKeyDown(Enum.KeyCode.A)           then dir -= cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D)           then dir += cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.Space)       then dir += Vector3.new(0,1,0)     end
+            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0)     end
+            bodyVel.Velocity = dir.Magnitude > 0 and dir.Unit * (flags["fly_speed"] or 60) or Vector3.zero
+            bodyGyro.CFrame  = cam.CFrame
         end)
     end
 
     local flySec = c2:section({name="Fly"})
     flySec:addToggle({name="Fly", flag="fly_on", default=false,
         callback=function(v)
-            local h=getHum()
-            if v then if h then h.PlatformStand=true end; startFly()
-            else stopFly(); if h then h.PlatformStand=false end end
+            local h = getHum()
+            if v then if h then h.PlatformStand = true end; startFly()
+            else stopFly(); if h then h.PlatformStand = false end end
         end})
        :addKeyBind({flag="fly_key", key=Enum.KeyCode.F, mode="toggle",
            callback=function(active)
-               local h=getHum(); flags["fly_on"]=active
-               if active then if h then h.PlatformStand=true end; startFly()
-               else stopFly(); if h then h.PlatformStand=false end end
+               local h = getHum(); flags["fly_on"] = active
+               if active then if h then h.PlatformStand = true end; startFly()
+               else stopFly(); if h then h.PlatformStand = false end end
            end})
     flySec:addSlider({name="Fly Speed", flag="fly_speed", min=5,max=300,default=60,interval=5,suffix=" sp"})
 
@@ -517,31 +851,32 @@ do
     movMisc:addToggle({name="No Clip", flag="noclip_on", default=false,
         callback=function(v)
             if v then
-                noclipConn=RunService.Stepped:Connect(function()
-                    if not flags["noclip_on"] then noclipConn:Disconnect(); noclipConn=nil; return end
-                    local c=getChar(); if not c then return end
-                    for _,p in pairs(c:GetDescendants()) do
-                        if p:IsA("BasePart") then p.CanCollide=false end
+                noclipConn = RunService.Stepped:Connect(function()
+                    if not flags["noclip_on"] then noclipConn:Disconnect(); noclipConn = nil; return end
+                    local c = getChar(); if not c then return end
+                    for _, p in pairs(c:GetDescendants()) do
+                        if p:IsA("BasePart") then p.CanCollide = false end
                     end
                 end)
             else
-                if noclipConn then noclipConn:Disconnect(); noclipConn=nil end
+                if noclipConn then noclipConn:Disconnect(); noclipConn = nil end
             end
         end})
-    movMisc:addToggle({name="Anti-AFK", flag="anti_afk", default=false, callback=function()end})
+    movMisc:addToggle({name="Anti-AFK", flag="anti_afk", default=false, callback=function() end})
 
     local blinkSec = c2:section({name="Blink"})
-    blinkSec:addToggle({name="Blink", flag="blink_on", default=false, callback=function()end})
+    blinkSec:addToggle({name="Blink", flag="blink_on", default=false, callback=function() end})
             :addKeyBind({flag="blink_key", key=Enum.KeyCode.X, mode="hold",
                 callback=function(active)
                     if active and flags["blink_on"] then
-                        local r=getRoot(); if not r then return end
-                        r.CFrame=r.CFrame*CFrame.new(0,0,-(flags["blink_dist"] or 40))
+                        local r = getRoot(); if not r then return end
+                        r.CFrame = r.CFrame * CFrame.new(0, 0, -(flags["blink_dist"] or 40))
                     end
                 end})
     blinkSec:addSlider({name="Distance", flag="blink_dist", min=5,max=200,default=40,interval=5,suffix=" st"})
 end
 
+-- ====== WEAPON TAB ======
 do
     local c1 = WeaponTab:column({fill=true})
     local c2 = WeaponTab:column({fill=true})
@@ -553,48 +888,131 @@ do
         return ws and ws:GetChildren() or {}
     end
 
+    -- Save/restore helpers with original value tracking
+    local origWeaponVals = {}
+    local function saveWV(w, name)
+        if not origWeaponVals[w] then origWeaponVals[w] = {} end
+        local obj = w:FindFirstChild(name)
+        if obj and origWeaponVals[w][name] == nil then
+            origWeaponVals[w][name] = obj.Value
+        end
+    end
+    local function restoreWV(w, name)
+        local obj = w:FindFirstChild(name)
+        if obj and origWeaponVals[w] and origWeaponVals[w][name] ~= nil then
+            pcall(function() obj.Value = origWeaponVals[w][name] end)
+        end
+    end
+
     modSec:addToggle({name="No Spread", flag="no_spread", default=false,
         callback=function(v)
-            for _,w in pairs(getWeapons()) do
-                if w:FindFirstChild("Spread")    then w.Spread.Value    = v and 0 or 1   end
-                if w:FindFirstChild("MaxSpread") then w.MaxSpread.Value = v and 0 or 1   end
-                if w:FindFirstChild("MinSpread") then w.MinSpread.Value = v and 0 or 0.5 end
-                if w:FindFirstChild("Bloom")     then w.Bloom.Value     = v and 0 or 1   end
+            for _, w in pairs(getWeapons()) do
+                for _, n in ipairs({"Spread","MaxSpread","MinSpread","Bloom","SpreadControl"}) do
+                    local obj = w:FindFirstChild(n)
+                    if obj then
+                        if v then saveWV(w,n); pcall(function() obj.Value = 0 end)
+                        else restoreWV(w,n) end
+                    end
+                end
             end
         end})
 
     modSec:addToggle({name="No Recoil", flag="no_recoil", default=false,
         callback=function(v)
-            for _,w in pairs(getWeapons()) do
-                if w:FindFirstChild("RecoilControl") then w.RecoilControl.Value = v and 0 or 1 end
-                if w:FindFirstChild("RecoilMax")     then w.RecoilMax.Value     = v and 0 or 1 end
-                if w:FindFirstChild("RecoilMin")     then w.RecoilMin.Value     = v and 0 or 1 end
-                if w:FindFirstChild("RecoilPunch") then
-                    w.RecoilPunch.Value = v and Vector3.new(0,0,0) or Vector3.new(1,1,1)
+            for _, w in pairs(getWeapons()) do
+                for _, n in ipairs({"RecoilControl","RecoilMax","RecoilMin","Recoil"}) do
+                    local obj = w:FindFirstChild(n)
+                    if obj then
+                        if v then saveWV(w,n); pcall(function() obj.Value = 0 end)
+                        else restoreWV(w,n) end
+                    end
+                end
+                local rp = w:FindFirstChild("RecoilPunch")
+                if rp then
+                    if v then saveWV(w,"RecoilPunch"); pcall(function() rp.Value = Vector3.zero end)
+                    else restoreWV(w,"RecoilPunch") end
                 end
             end
         end})
 
     modSec:addToggle({name="Rapid Fire", flag="rapid_fire", default=false,
         callback=function(v)
-            for _,w in pairs(getWeapons()) do
-                if w:FindFirstChild("FireRate") then w.FireRate.Value = v and 0.03 or 0.15 end
+            for _, w in pairs(getWeapons()) do
+                for _, n in ipairs({"FireRate","BFireRate"}) do
+                    local obj = w:FindFirstChild(n)
+                    if obj then
+                        if v then saveWV(w,n); pcall(function() obj.Value = 0.02 end)
+                        else restoreWV(w,n) end
+                    end
+                end
+            end
+        end})
+
+    -- Always Auto (from AdvanceTech open-source script)
+    modSec:addToggle({name="Always Auto", flag="always_auto", default=false,
+        callback=function(v)
+            for _, w in pairs(getWeapons()) do
+                for _, n in ipairs({"Auto","AutoFire","Automatic","AutoShoot","AutoGun"}) do
+                    local obj = w:FindFirstChild(n)
+                    if obj then
+                        if v then saveWV(w,n); pcall(function() obj.Value = true end)
+                        else restoreWV(w,n) end
+                    end
+                end
+            end
+        end})
+
+    -- Fast Reload (from AdvanceTech open-source script)
+    modSec:addToggle({name="Fast Reload", flag="fast_reload", default=false,
+        callback=function(v)
+            for _, w in pairs(getWeapons()) do
+                for _, n in ipairs({"ReloadTime","EReloadTime"}) do
+                    local obj = w:FindFirstChild(n)
+                    if obj then
+                        if v then saveWV(w,n); pcall(function() obj.Value = 0.01 end)
+                        else restoreWV(w,n) end
+                    end
+                end
             end
         end})
 
     modSec:addSlider({name="Fire Rate", flag="custom_fire_rate", min=0.001,max=1,default=0.15,interval=0.001,suffix="s",
         callback=function(v)
-            for _,w in pairs(getWeapons()) do
-                if w:FindFirstChild("FireRate") then w.FireRate.Value=v end
+            for _, w in pairs(getWeapons()) do
+                for _, n in ipairs({"FireRate","BFireRate"}) do
+                    local obj = w:FindFirstChild(n)
+                    if obj then pcall(function() obj.Value = v end) end
+                end
             end
         end})
 
+
     local AMMO_VALUE = 677
-
-    local ammoConns = {}
-
     local AMMO_PROPS = {"Ammo"}
 
+    local function setAllAmmo()
+        for _, w in pairs(getWeapons()) do
+            for _, prop in ipairs(AMMO_PROPS) do
+                local obj = w:FindFirstChild(prop)
+                if obj and obj.Value ~= AMMO_VALUE then
+                    pcall(function() obj.Value = AMMO_VALUE end)
+                end
+            end
+        end
+
+        pcall(function()
+            local vars = lp.PlayerGui.GUI.Client.Variables
+            if vars.ammocount.Value  ~= 677 then vars.ammocount.Value  = 677 end
+            if vars.ammocount2.Value ~= 677 then vars.ammocount2.Value = 677 end
+        end)
+        pcall(function()
+            if flags["inf_ammo"] then
+                RepStorage.wkspc.CurrentCurse.Value = "Infinite Ammo"
+            end
+        end)
+    end
+
+    local ammoConns = {}
     local function hookWeaponAmmo(w)
         for _, propName in ipairs(AMMO_PROPS) do
             local obj = w:FindFirstChild(propName)
@@ -608,43 +1026,27 @@ do
         end
     end
 
-    for _,w in pairs(getWeapons()) do hookWeaponAmmo(w) end
+    for _, w in pairs(getWeapons()) do hookWeaponAmmo(w) end
 
-    local weaponFolder = RepStorage:FindFirstChild("Weapons")
-    if weaponFolder then
-        weaponFolder.ChildAdded:Connect(function(w)
-            task.wait(0.05)
-            hookWeaponAmmo(w)
-        end)
+    local wf = RepStorage:FindFirstChild("Weapons")
+    if wf then
+        wf.ChildAdded:Connect(function(w) task.wait(0.05); hookWeaponAmmo(w) end)
     end
-
-    task.spawn(function()
-        while true do
-            task.wait(0.5)
-            if flags["inf_ammo"] then
-                for _,w in pairs(getWeapons()) do
-                    for _, prop in ipairs(AMMO_PROPS) do
-                        local obj = w:FindFirstChild(prop)
-                        if obj and obj.Value ~= AMMO_VALUE then
-                            pcall(function() obj.Value = AMMO_VALUE end)
-                        end
-                    end
-                end
-            end
-        end
-    end)
 
     modSec:addToggle({name="Infinite Ammo", flag="inf_ammo", default=false,
         callback=function(v)
-            if v then
-                for _,w in pairs(getWeapons()) do
-                    for _, prop in ipairs(AMMO_PROPS) do
-                        local obj = w:FindFirstChild(prop)
-                        if obj then pcall(function() obj.Value = AMMO_VALUE end) end
-                    end
-                end
+            if v then setAllAmmo()
+            else
+                pcall(function() RepStorage.wkspc.CurrentCurse.Value = "" end)
             end
         end})
+
+    task.spawn(function()
+        while true do
+            task.wait(0.02)
+            if flags["inf_ammo"] then setAllAmmo() end
+        end
+    end)
 
     local utilSec = c2:section({name="Combat"})
 
@@ -660,16 +1062,13 @@ do
 
     local function getAliveEnemies()
         local list = {}
-        for _,pl in pairs(Players:GetPlayers()) do
+        for _, pl in pairs(Players:GetPlayers()) do
             if pl == lp then continue end
             if flags["kill_team_check"] and pl.Team == lp.Team then continue end
-            if isPlayerAlive(pl) then
-                table.insert(list, pl)
-            end
+            if isPlayerAlive(pl) then table.insert(list, pl) end
         end
         for i = #list, 2, -1 do
-            local j = math.random(1, i)
-            list[i], list[j] = list[j], list[i]
+            local j = math.random(1, i); list[i], list[j] = list[j], list[i]
         end
         return list
     end
@@ -690,14 +1089,14 @@ do
 
                 if not isPlayerAlive(target) then continue end
 
-                local engageStart   = tick()
-                local maxEngage     = flags["kill_engage_time"] or 4
+                local engageStart = tick()
+                local maxEngage   = flags["kill_engage_time"] or 4
 
                 while killAllActive do
-                    local r   = getRoot()
-                    local c   = target.Character
-                    local h   = c and c:FindFirstChildOfClass("Humanoid")
-                    local hrp = c and c:FindFirstChild("HumanoidRootPart")
+                    local r    = getRoot()
+                    local c    = target.Character
+                    local h    = c and c:FindFirstChildOfClass("Humanoid")
+                    local hrp  = c and c:FindFirstChild("HumanoidRootPart")
                     local head = c and c:FindFirstChild("Head")
 
                     if not r or not c or not h or not hrp then break end
@@ -724,48 +1123,49 @@ do
 
     utilSec:addToggle({name="Kill All", flag="kill_all", default=false,
         callback=function(v)
-            killAllActive=v
+            killAllActive = v
             if v then
                 if killAllThread then task.cancel(killAllThread) end
-                killAllThread=task.spawn(runKillAll)
+                killAllThread = task.spawn(runKillAll)
                 notifications:create_notification({name="kill all on — T to toggle"})
             else
-                if killAllThread then task.cancel(killAllThread); killAllThread=nil end
+                if killAllThread then task.cancel(killAllThread); killAllThread = nil end
                 notifications:create_notification({name="kill all off"})
             end
         end})
        :addKeyBind({flag="kill_all_key", key=Enum.KeyCode.T, mode="toggle",
            callback=function(active)
-               flags["kill_all"]=active; killAllActive=active
+               flags["kill_all"] = active; killAllActive = active
                if active then
                    if killAllThread then task.cancel(killAllThread) end
-                   killAllThread=task.spawn(runKillAll)
+                   killAllThread = task.spawn(runKillAll)
                    notifications:create_notification({name="kill all on"})
                else
-                   if killAllThread then task.cancel(killAllThread); killAllThread=nil end
+                   if killAllThread then task.cancel(killAllThread); killAllThread = nil end
                    notifications:create_notification({name="kill all off"})
                end
            end})
-    utilSec:addToggle({name="Team Check",      flag="kill_team_check",  default=true,  callback=function()end})
+    utilSec:addToggle({name="Team Check",      flag="kill_team_check",  default=true, callback=function() end})
     utilSec:addSlider({name="TP Delay",        flag="kill_delay",       min=0.001,max=0.5,default=0.06,interval=0.001,suffix="s"})
-    utilSec:addSlider({name="Max Engage Time", flag="kill_engage_time", min=0.5,  max=10, default=4,   interval=0.5,  suffix="s"})
+    utilSec:addSlider({name="Max Engage Time", flag="kill_engage_time", min=0.5,max=10,default=4,interval=0.5,suffix="s"})
 
     local spinConn
     utilSec:addToggle({name="Spin Bot", flag="spin_on", default=false,
         callback=function(v)
             if v then
-                spinConn=RunService.RenderStepped:Connect(function(dt)
-                    if not flags["spin_on"] then spinConn:Disconnect(); spinConn=nil; return end
-                    local r=getRoot()
-                    if r then r.CFrame=r.CFrame*CFrame.Angles(0,math.rad((flags["spin_speed"] or 180)*dt),0) end
+                spinConn = RunService.RenderStepped:Connect(function(dt)
+                    if not flags["spin_on"] then spinConn:Disconnect(); spinConn = nil; return end
+                    local r = getRoot()
+                    if r then r.CFrame = r.CFrame * CFrame.Angles(0, math.rad((flags["spin_speed"] or 180) * dt), 0) end
                 end)
             else
-                if spinConn then spinConn:Disconnect(); spinConn=nil end
+                if spinConn then spinConn:Disconnect(); spinConn = nil end
             end
         end})
     utilSec:addSlider({name="Spin Speed", flag="spin_speed", min=10,max=720,default=180,interval=10,suffix="°/s"})
 end
 
+-- ====== PLAYER TAB ======
 do
     local c1 = PlayerTab:column({fill=true})
     local c2 = PlayerTab:column({fill=true})
@@ -773,25 +1173,25 @@ do
     local tpSec = c1:section({name="Teleport"})
     tpSec:addButton({name="Teleport to Cursor",
         callback=function()
-            local r=getRoot(); if not r then return end
-            local ray=cam:ScreenPointToRay(mouse.X,mouse.Y)
-            local result=Workspace:Raycast(ray.Origin,ray.Direction*1000)
+            local r = getRoot(); if not r then return end
+            local ray    = cam:ScreenPointToRay(mouse.X, mouse.Y)
+            local result = Workspace:Raycast(ray.Origin, ray.Direction * 1000)
             r.CFrame = result
-                and CFrame.new(result.Position+Vector3.new(0,3,0))
-                or  CFrame.new(cam.CFrame.Position+cam.CFrame.LookVector*20)
+                and CFrame.new(result.Position + Vector3.new(0,3,0))
+                or  CFrame.new(cam.CFrame.Position + cam.CFrame.LookVector * 20)
         end})
     tpSec:addButton({name="Teleport to Nearest",
         callback=function()
-            local r=getRoot(); if not r then return end
-            local nearest,best=nil,math.huge
-            for _,pl in pairs(Players:GetPlayers()) do
-                if pl~=lp and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
-                    local d=(pl.Character.HumanoidRootPart.Position-r.Position).Magnitude
-                    if d<best then nearest=pl; best=d end
+            local r = getRoot(); if not r then return end
+            local nearest, best = nil, math.huge
+            for _, pl in pairs(Players:GetPlayers()) do
+                if pl ~= lp and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
+                    local d = (pl.Character.HumanoidRootPart.Position - r.Position).Magnitude
+                    if d < best then nearest = pl; best = d end
                 end
             end
             if nearest then
-                r.CFrame=nearest.Character.HumanoidRootPart.CFrame*CFrame.new(0,0,3)
+                r.CFrame = nearest.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
                 notifications:create_notification({name="teleported to "..nearest.Name})
             else
                 notifications:create_notification({name="no players found"})
@@ -799,51 +1199,51 @@ do
         end})
     tpSec:addButton({name="Bring All Players",
         callback=function()
-            local r=getRoot(); if not r then return end
-            local count=0
-            for _,pl in pairs(Players:GetPlayers()) do
-                if pl~=lp and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
-                    pl.Character.HumanoidRootPart.CFrame=r.CFrame*CFrame.new(math.random(-4,4),0,math.random(-4,4))
-                    count+=1
+            local r = getRoot(); if not r then return end
+            local count = 0
+            for _, pl in pairs(Players:GetPlayers()) do
+                if pl ~= lp and pl.Character and pl.Character:FindFirstChild("HumanoidRootPart") then
+                    pl.Character.HumanoidRootPart.CFrame = r.CFrame * CFrame.new(math.random(-4,4),0,math.random(-4,4))
+                    count += 1
                 end
             end
             notifications:create_notification({name="pulled "..count.." players"})
         end})
     tpSec:addButton({name="Rejoin Server",
         callback=function()
-            game:GetService("TeleportService"):Teleport(game.PlaceId,lp)
+            game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
         end})
 
     local targetSec = c1:section({name="Target Player"})
-    local plrNames = {"(none)"}
-    for _,pl in pairs(Players:GetPlayers()) do
-        if pl~=lp then table.insert(plrNames,pl.Name) end
+    local plrNames  = {"(none)"}
+    for _, pl in pairs(Players:GetPlayers()) do
+        if pl ~= lp then table.insert(plrNames, pl.Name) end
     end
     local plrDrop = targetSec:addDropdown({name="Player", flag="target_player",
-        items=plrNames, default="(none)", callback=function()end})
+        items=plrNames, default="(none)", callback=function() end})
     Players.PlayerAdded:Connect(function(pl)
-        table.insert(plrNames,pl.Name); plrDrop.refreshOptions(plrNames)
+        table.insert(plrNames, pl.Name); plrDrop.refreshOptions(plrNames)
     end)
     Players.PlayerRemoving:Connect(function(pl)
-        for i,n in pairs(plrNames) do
-            if n==pl.Name then table.remove(plrNames,i); break end
+        for i, n in pairs(plrNames) do
+            if n == pl.Name then table.remove(plrNames, i); break end
         end
         plrDrop.refreshOptions(plrNames)
     end)
     targetSec:addButton({name="Teleport to Selected",
         callback=function()
-            local sel=flags["target_player"]; if not sel or sel=="(none)" then return end
-            local target=Players:FindFirstChild(sel); local r=getRoot()
+            local sel = flags["target_player"]; if not sel or sel == "(none)" then return end
+            local target = Players:FindFirstChild(sel); local r = getRoot()
             if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and r then
-                r.CFrame=target.Character.HumanoidRootPart.CFrame*CFrame.new(0,0,3)
+                r.CFrame = target.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
             end
         end})
     targetSec:addButton({name="Bring Selected",
         callback=function()
-            local sel=flags["target_player"]; if not sel or sel=="(none)" then return end
-            local target=Players:FindFirstChild(sel); local r=getRoot()
+            local sel = flags["target_player"]; if not sel or sel == "(none)" then return end
+            local target = Players:FindFirstChild(sel); local r = getRoot()
             if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") and r then
-                target.Character.HumanoidRootPart.CFrame=r.CFrame*CFrame.new(0,0,2)
+                target.Character.HumanoidRootPart.CFrame = r.CFrame * CFrame.new(0,0,2)
             end
         end})
 
@@ -852,31 +1252,32 @@ do
     charSec:addToggle({name="God Mode", flag="god_mode", default=false,
         callback=function(v)
             if v then
-                local h=getHum(); if h then h.MaxHealth=math.huge end
-                godConn=RunService.Heartbeat:Connect(function()
-                    if not flags["god_mode"] then godConn:Disconnect(); godConn=nil; return end
-                    local h2=getHum(); if h2 then h2.Health=h2.MaxHealth end
+                local h = getHum(); if h then h.MaxHealth = math.huge end
+                godConn = RunService.Heartbeat:Connect(function()
+                    if not flags["god_mode"] then godConn:Disconnect(); godConn = nil; return end
+                    local h2 = getHum(); if h2 then h2.Health = h2.MaxHealth end
                 end)
             else
-                if godConn then godConn:Disconnect(); godConn=nil end
-                local h=getHum(); if h then h.MaxHealth=100; h.Health=100 end
+                if godConn then godConn:Disconnect(); godConn = nil end
+                local h = getHum(); if h then h.MaxHealth = 100; h.Health = 100 end
             end
         end})
     charSec:addToggle({name="Freeze Character", flag="freeze_char", default=false,
-        callback=function(v) local r=getRoot(); if r then r.Anchored=v end end})
+        callback=function(v) local r = getRoot(); if r then r.Anchored = v end end})
     charSec:addToggle({name="Hide Character", flag="hide_char", default=false,
         callback=function(v)
-            local c=getChar(); if not c then return end
-            for _,p in pairs(c:GetDescendants()) do
+            local c = getChar(); if not c then return end
+            for _, p in pairs(c:GetDescendants()) do
                 if p:IsA("BasePart") or p:IsA("Decal") then
-                    p.LocalTransparencyModifier=v and 1 or 0
+                    p.LocalTransparencyModifier = v and 1 or 0
                 end
             end
         end})
     charSec:addSlider({name="Camera FOV", flag="cam_fov", min=40,max=120,default=70,interval=1,suffix="°",
-        callback=function(v) cam.FieldOfView=v end})
+        callback=function(v) cam.FieldOfView = v end})
 end
 
+-- ====== MISC TAB ======
 do
     local c1 = MiscTab:column({fill=true})
     local notifSec = c1:section({name="Notifications"})
@@ -892,15 +1293,17 @@ do
         end})
 end
 
+-- ====== SETTINGS TAB ======
 do
     local c1 = SettingsTab:column({fill=true})
     local c2 = SettingsTab:column({fill=true})
     local cfgSec = c1:section({name="Config"})
 
-    local cfgDir = library.directory.."/configs"
+    -- FIX: ensure directories exist before any file operations
+    local cfgDir = library.directory .. "/configs"
     pcall(function()
         if not isfolder(library.directory) then makefolder(library.directory) end
-        if not isfolder(cfgDir)            then makefolder(cfgDir)            end
+        if not isfolder(cfgDir)            then makefolder(cfgDir) end
     end)
 
     cfgSec:addList({name="Configs", flag="cfg_list", scale=100})
@@ -912,7 +1315,7 @@ do
             if not name or name == "" then
                 notifications:create_notification({name="enter a config name first"}); return
             end
-            local ok, err = pcall(function()
+            local ok = pcall(function()
                 writefile(cfgDir.."/"..name..".cfg", library:getConfig())
             end)
             if ok then
@@ -932,7 +1335,7 @@ do
             local ok = pcall(function()
                 writefile(cfgDir.."/"..n..".cfg", library:getConfig())
             end)
-            notifications:create_notification({name=ok and ("saved: "..n) or "save failed"})
+            notifications:create_notification({name = ok and ("saved: "..n) or "save failed"})
         end})
 
     cfgSec:addButton({name="Load",
@@ -952,8 +1355,7 @@ do
 
     cfgSec:addButton({name="Delete",
         callback=function()
-            local n = flags["cfg_list"]
-            if not n or n == "" then return end
+            local n = flags["cfg_list"]; if not n or n == "" then return end
             pcall(function() delfile(cfgDir.."/"..n..".cfg") end)
             library:configListUpdate()
             notifications:create_notification({name="deleted: "..n})
@@ -964,24 +1366,32 @@ do
 
     local uiSec = c2:section({name="UI"})
     local menuOpen = true
+
+    -- FIX: Mouse is fully freed when menu is hidden
+    local function applyMenuMouseState(open)
+        if not open then
+            pcall(function()
+                UIS.MouseBehavior    = Enum.MouseBehavior.Default
+                UIS.MouseIconEnabled = true
+            end)
+        end
+    end
+
     uiSec:addLabel({name="Menu Toggle"}):addKeyBind({flag="menu_key",
         callback=function()
             if not window.is_closing_menu then
                 menuOpen = not menuOpen
                 window.toggle_menu(menuOpen)
-                if not menuOpen then
-                    pcall(function()
-                        UIS.MouseBehavior    = Enum.MouseBehavior.Default
-                        UIS.MouseIconEnabled = true
-                    end)
-                end
+                applyMenuMouseState(menuOpen)
             end
         end})
     uiSec:addLabel({name="Accent Color"}):addColorPicker({flag="accent_color",
         color=themes.preset.accent,
-        callback=function(c,a) library:updateTheme("accent",c) end})
+        callback=function(c,a) library:updateTheme("accent", c) end})
     uiSec:addButton({name="Unload Menu", callback=function() library:unloadMenu() end})
 end
+
+-- ====== TARGET SELECTION ======
 
 local function makeRayParams()
     local rp = RaycastParams.new()
@@ -992,12 +1402,12 @@ local function makeRayParams()
 end
 
 local function getTarget()
-    local mousePos = UIS:GetMouseLocation()
-    local fov      = flags["fov_radius"]   or 150
-    local maxDist  = flags["aim_max_dist"] or 500
-    local root     = getRoot()
+    local mousePos  = UIS:GetMouseLocation()
+    local fov       = flags["fov_radius"]   or 150
+    local maxDist   = flags["aim_max_dist"] or 500
+    local root      = getRoot()
     local best, bestScore = nil, math.huge
-    local wallbang = flags["wallbang"]
+    local wallbang  = flags["wallbang"]
 
     for _, pl in pairs(Players:GetPlayers()) do
         if pl == lp then continue end
@@ -1025,6 +1435,7 @@ local function getTarget()
             score = h.Health
         elseif priority == "Line of Sight" then
             if wallbang then
+                -- FIX: wallbang skips all LOS, treats as nearest mouse
                 score = screenDist
             else
                 local rp = makeRayParams()
@@ -1034,71 +1445,79 @@ local function getTarget()
         end
 
         if score ~= nil and score < bestScore then
-            best      = pl
-            bestScore = score
+            best = pl; bestScore = score
         end
     end
 
     return best
 end
 
-local triggerCooldown = 0
+-- ====== TRIGGER BOT (FIX: uses mouse.Target like AdvanceTech working version) ======
+-- Source: AdvanceTech Arsenal open-source triggerbot (mouse.Target approach)
 
-RunService.Heartbeat:Connect(function()
-    if not flags["triggerbot"] then return end
+local triggerCooldown = 0
+local triggerAlive    = true
+
+local function hookTriggerHumanoid(char)
+    local h = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 5)
+    if h then h.HealthChanged:Connect(function(hp) triggerAlive = hp > 0 end) end
+    triggerAlive = true
+end
+
+lp.CharacterAdded:Connect(hookTriggerHumanoid)
+if getChar() then hookTriggerHumanoid(getChar()) end
+
+local function isEnemyPlayer(pl)
+    if not flags["aim_team_check"] then return true end
+    return pl.Team ~= lp.Team
+end
+
+RunService.RenderStepped:Connect(function()
+    if not flags["triggerbot"] or not triggerAlive then return end
     local trigKey = flags["trigger_key"]
     if trigKey and not trigKey.active then return end
 
     local now = tick()
     if now - triggerCooldown < (flags["trigger_delay"] or 0.08) then return end
 
-    local maxDist  = flags["aim_max_dist"] or 500
-    local tfov     = flags["trigger_fov"]  or 80
-    local wallbang = flags["wallbang"]
-    local mousePos = UIS:GetMouseLocation()
-    local rp       = makeRayParams()
-
-    for _, pl in pairs(Players:GetPlayers()) do
-        if pl == lp then continue end
-        if flags["aim_team_check"] and pl.Team == lp.Team then continue end
-        local c   = pl.Character
-        local h   = c and c:FindFirstChildOfClass("Humanoid")
-        local hrp = c and c:FindFirstChild("HumanoidRootPart")
-        if not (c and h and hrp and h.Health > 0) then continue end
-
-        local hitParts = {"Head", "UpperTorso", "LowerTorso", "HumanoidRootPart"}
-        local triggered = false
-
-        for _, partName in ipairs(hitParts) do
-            local part = c:FindFirstChild(partName)
-            if not part then continue end
-
-            local sp, onScreen = cam:WorldToViewportPoint(part.Position)
-            if not onScreen then continue end
-            if (Vector2.new(sp.X, sp.Y) - mousePos).Magnitude > tfov then continue end
-
-            if wallbang then
-                triggered = true
-                break
-            else
-                local origin = cam.CFrame.Position
-                local dir    = (part.Position - origin)
-                local rc     = Workspace:Raycast(origin, dir, rp)
-                if rc and rc.Instance and rc.Instance:IsDescendantOf(c) then
-                    triggered = true
-                    break
-                end
+    -- Primary: direct mouse.Target check (works perfectly with hitbox expander)
+    local tgt = mouse.Target
+    if tgt and tgt.Parent then
+        local h = tgt.Parent:FindFirstChild("Humanoid")
+        if h and tgt.Parent.Name ~= lp.Name and h.Health > 0 then
+            local targetPl = Players:FindFirstChild(tgt.Parent.Name)
+            if targetPl and isEnemyPlayer(targetPl) then
+                mouse1press()
+                task.delay(flags["trigger_delay"] or 0.08, function() mouse1release() end)
+                triggerCooldown = now
+                return
             end
         end
+    end
 
-        if triggered then
+    -- Fallback / wallbang path: screen-space proximity check
+    if flags["wallbang"] then
+        local mousePos = UIS:GetMouseLocation()
+        local tfov     = flags["trigger_fov"] or 80
+        for _, pl in pairs(Players:GetPlayers()) do
+            if pl == lp then continue end
+            if not isEnemyPlayer(pl) then continue end
+            local c   = pl.Character
+            local h   = c and c:FindFirstChildOfClass("Humanoid")
+            local hrp = c and c:FindFirstChild("HumanoidRootPart")
+            if not (c and h and hrp and h.Health > 0) then continue end
+            local sp, onScreen = cam:WorldToViewportPoint(hrp.Position)
+            if not onScreen then continue end
+            if (Vector2.new(sp.X, sp.Y) - mousePos).Magnitude > tfov then continue end
             mouse1press()
-            task.delay(0.04, function() mouse1release() end)
+            task.delay(flags["trigger_delay"] or 0.08, function() mouse1release() end)
             triggerCooldown = now
             break
         end
     end
 end)
+
+-- ====== MAIN RENDER LOOP ======
 
 RunService.RenderStepped:Connect(function()
     local mp      = UIS:GetMouseLocation()
@@ -1111,6 +1530,7 @@ RunService.RenderStepped:Connect(function()
     local currentTarget = getTarget()
     silentAimTarget = (flags["silent_aim"] and currentTarget) or nil
 
+    -- Aimbot
     if flags["aim_on"] then
         local aimKey = flags["aim_key"]
         if aimKey and aimKey.active and currentTarget and currentTarget.Character then
@@ -1131,65 +1551,66 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
+    -- Crosshair
     if flags["xhair_on"] then
-        local cx  = vp.X/2
-        local cy  = vp.Y/2
+        local cx  = vp.X / 2
+        local cy  = vp.Y / 2
         local sz  = flags["xhair_size"]  or 10
         local gap = flags["xhair_gap"]   or 3
         local thk = flags["xhair_thick"] or 2
         local col = colors.xhair
         local function setL(l,fx,fy,tx,ty)
-            l.From=Vector2.new(fx,fy); l.To=Vector2.new(tx,ty)
-            l.Thickness=thk; l.Color=col; l.Visible=true
+            l.From = Vector2.new(fx,fy); l.To = Vector2.new(tx,ty)
+            l.Thickness = thk; l.Color = col; l.Visible = true
         end
-        setL(xhairLines.top,    cx,       cy-gap-sz, cx,       cy-gap    )
-        setL(xhairLines.bottom, cx,       cy+gap,    cx,       cy+gap+sz )
-        setL(xhairLines.left,   cx-gap-sz,cy,        cx-gap,   cy        )
-        setL(xhairLines.right,  cx+gap,   cy,        cx+gap+sz,cy        )
-        xhairLines.dot.Visible  = flags["xhair_dot"]==true
-        xhairLines.dot.Position = Vector2.new(cx,cy)
+        setL(xhairLines.top,    cx,        cy-gap-sz, cx,        cy-gap   )
+        setL(xhairLines.bottom, cx,        cy+gap,    cx,        cy+gap+sz)
+        setL(xhairLines.left,   cx-gap-sz, cy,        cx-gap,    cy       )
+        setL(xhairLines.right,  cx+gap,    cy,        cx+gap+sz, cy       )
+        xhairLines.dot.Visible  = flags["xhair_dot"] == true
+        xhairLines.dot.Position = Vector2.new(cx, cy)
         xhairLines.dot.Color    = col
     else
-        for _,l in pairs(xhairLines) do l.Visible=false end
+        for _, l in pairs(xhairLines) do l.Visible = false end
     end
 
+    -- Player ESP
     for pl, d in pairs(espObjects) do
         local c   = pl.Character
         local h   = c and c:FindFirstChildOfClass("Humanoid")
         local hrp = c and c:FindFirstChild("HumanoidRootPart")
 
         local function hideAll()
-            d.box.Visible=false; d.boxFill.Visible=false
-            d.nameText.Visible=false; d.distText.Visible=false
-            d.hpBG.Visible=false; d.hpBar.Visible=false; d.hpText.Visible=false
-            d.tracer.Visible=false; d.snapLine.Visible=false
-            for _,l in pairs(d.corners)  do l.Visible=false end
-            for _,l in pairs(d.skeleton) do l.Visible=false end
+            d.box.Visible = false; d.boxFill.Visible = false
+            d.nameText.Visible = false; d.distText.Visible = false
+            d.hpBG.Visible = false; d.hpBar.Visible = false; d.hpText.Visible = false
+            d.tracer.Visible = false; d.snapLine.Visible = false
+            for _, l in pairs(d.corners)  do l.Visible = false end
+            for _, l in pairs(d.skeleton) do l.Visible = false end
         end
 
-        if not espOn or not c or not h or not hrp or h.Health<=0 then hideAll(); continue end
-        if rootPos and (hrp.Position-rootPos).Magnitude>(flags["esp_max_dist"] or 800) then hideAll(); continue end
+        if not espOn or not c or not h or not hrp or h.Health <= 0 then hideAll(); continue end
+        if rootPos and (hrp.Position - rootPos).Magnitude > (flags["esp_max_dist"] or 800) then hideAll(); continue end
 
         local sp, onScreen = cam:WorldToViewportPoint(hrp.Position)
         if not onScreen then hideAll(); continue end
 
-        local topSP  = cam:WorldToViewportPoint(hrp.Position + Vector3.new(0,  2.8, 0))
-        local botSP  = cam:WorldToViewportPoint(hrp.Position - Vector3.new(0,  2.8, 0))
-        local boxH   = math.abs(botSP.Y - topSP.Y)
-        local boxW   = boxH * 0.55
-        local bx     = sp.X - boxW / 2
-        local by     = topSP.Y
-        local boxCol = colors.box
-        local style  = flags["box_style"] or "Corner Box"
+        local topSP = cam:WorldToViewportPoint(hrp.Position + Vector3.new(0,  2.8, 0))
+        local botSP = cam:WorldToViewportPoint(hrp.Position - Vector3.new(0,  2.8, 0))
+        local boxH  = math.abs(botSP.Y - topSP.Y)
+        local boxW  = boxH * 0.55
+        local bx    = sp.X - boxW / 2
+        local by    = topSP.Y
+        local style = flags["box_style"] or "Corner Box"
 
         if flags["box_esp"] then
             if style == "Full Box" then
-                for _,l in pairs(d.corners) do l.Visible=false end
-                d.box.Size=Vector2.new(boxW,boxH); d.box.Position=Vector2.new(bx,by)
-                d.box.Color=boxCol; d.box.Visible=true
+                for _, l in pairs(d.corners) do l.Visible = false end
+                d.box.Size = Vector2.new(boxW,boxH); d.box.Position = Vector2.new(bx,by)
+                d.box.Color = colors.box; d.box.Visible = true
             elseif style == "Corner Box" then
-                d.box.Visible=false
-                local cL = math.min(boxW,boxH)*0.28
+                d.box.Visible = false
+                local cL = math.min(boxW,boxH) * 0.28
                 local co = d.corners
                 co[1].From=Vector2.new(bx,by);          co[1].To=Vector2.new(bx+cL,by)
                 co[2].From=Vector2.new(bx,by);          co[2].To=Vector2.new(bx,by+cL)
@@ -1199,106 +1620,155 @@ RunService.RenderStepped:Connect(function()
                 co[6].From=Vector2.new(bx,by+boxH);     co[6].To=Vector2.new(bx,by+boxH-cL)
                 co[7].From=Vector2.new(bx+boxW,by+boxH);co[7].To=Vector2.new(bx+boxW-cL,by+boxH)
                 co[8].From=Vector2.new(bx+boxW,by+boxH);co[8].To=Vector2.new(bx+boxW,by+boxH-cL)
-                for _,l in pairs(co) do l.Color=boxCol; l.Visible=true end
+                for _, l in pairs(co) do l.Color = colors.box; l.Visible = true end
             else
-                d.box.Visible=false
-                for _,l in pairs(d.corners) do l.Visible=false end
+                d.box.Visible = false
+                for _, l in pairs(d.corners) do l.Visible = false end
             end
         else
-            d.box.Visible=false
-            for _,l in pairs(d.corners) do l.Visible=false end
+            d.box.Visible = false
+            for _, l in pairs(d.corners) do l.Visible = false end
         end
 
         if flags["box_esp"] and flags["box_fill"] then
-            d.boxFill.Size=Vector2.new(boxW,boxH)
-            d.boxFill.Position=Vector2.new(bx,by)
-            d.boxFill.Color=colors.boxFill
-            d.boxFill.Transparency=colors.boxFillTr
-            d.boxFill.Visible=true
-        else d.boxFill.Visible=false end
+            d.boxFill.Size = Vector2.new(boxW,boxH); d.boxFill.Position = Vector2.new(bx,by)
+            d.boxFill.Color = colors.boxFill; d.boxFill.Transparency = colors.boxFillTr
+            d.boxFill.Visible = true
+        else d.boxFill.Visible = false end
 
         if flags["name_esp"] then
-            d.nameText.Text=pl.Name
-            d.nameText.Position=Vector2.new(sp.X, by-14)
-            d.nameText.Visible=true
-        else d.nameText.Visible=false end
+            d.nameText.Text = pl.Name; d.nameText.Position = Vector2.new(sp.X, by-14)
+            d.nameText.Visible = true
+        else d.nameText.Visible = false end
 
         if flags["dist_esp"] and rootPos then
-            local dist=math.round((hrp.Position-rootPos).Magnitude)
-            d.distText.Text=dist.."m"
-            d.distText.Position=Vector2.new(sp.X, by+boxH+3)
-            d.distText.Visible=true
-        else d.distText.Visible=false end
+            local dist = math.round((hrp.Position - rootPos).Magnitude)
+            d.distText.Text = dist.."m"; d.distText.Position = Vector2.new(sp.X, by+boxH+3)
+            d.distText.Visible = true
+        else d.distText.Visible = false end
 
         if flags["hp_esp"] then
-            local pct  = math.clamp(h.Health/math.max(h.MaxHealth,1),0,1)
+            local pct  = math.clamp(h.Health / math.max(h.MaxHealth,1), 0, 1)
             local hbX  = bx - 6
             local barH = boxH * pct
-            d.hpBG.Size=Vector2.new(4,boxH)
-            d.hpBG.Position=Vector2.new(hbX,by)
-            d.hpBG.Visible=true
-            d.hpBar.Size=Vector2.new(4,barH)
-            d.hpBar.Position=Vector2.new(hbX, by+boxH-barH)
+            d.hpBG.Size = Vector2.new(4,boxH); d.hpBG.Position = Vector2.new(hbX,by); d.hpBG.Visible = true
+            d.hpBar.Size = Vector2.new(4,barH); d.hpBar.Position = Vector2.new(hbX, by+boxH-barH)
             d.hpBar.Color = flags["hp_color_gradient"]
                 and Color3.fromRGB(math.round((1-pct)*255), math.round(pct*255), 0)
                 or  Color3.fromRGB(0,255,0)
-            d.hpBar.Visible=true
+            d.hpBar.Visible = true
             if flags["hp_text"] then
-                d.hpText.Text=math.floor(h.Health)
-                d.hpText.Position=Vector2.new(hbX+2, by+boxH-barH-12)
-                d.hpText.Visible=true
-            else d.hpText.Visible=false end
+                d.hpText.Text = math.floor(h.Health)
+                d.hpText.Position = Vector2.new(hbX+2, by+boxH-barH-12)
+                d.hpText.Visible = true
+            else d.hpText.Visible = false end
         else
-            d.hpBG.Visible=false; d.hpBar.Visible=false; d.hpText.Visible=false
+            d.hpBG.Visible = false; d.hpBar.Visible = false; d.hpText.Visible = false
         end
 
         if flags["tracers_on"] then
             local origin = flags["tracer_origin"] or "Bottom"
-            local fromX  = origin=="Mouse" and mp.X or vp.X/2
-            local fromY  = origin=="Top"    and 0
-                        or origin=="Center" and vp.Y/2
-                        or origin=="Mouse"  and mp.Y
+            local fromX  = origin == "Mouse" and mp.X or vp.X/2
+            local fromY  = origin == "Top"    and 0
+                        or origin == "Center" and vp.Y/2
+                        or origin == "Mouse"  and mp.Y
                         or vp.Y
-            d.tracer.From=Vector2.new(fromX,fromY)
-            d.tracer.To=Vector2.new(sp.X,sp.Y)
-            d.tracer.Color=colors.tracer
-            d.tracer.Thickness=colors.tracerThick
-            d.tracer.Visible=true
-        else d.tracer.Visible=false end
+            d.tracer.From = Vector2.new(fromX,fromY); d.tracer.To = Vector2.new(sp.X,sp.Y)
+            d.tracer.Color = colors.tracer; d.tracer.Thickness = colors.tracerThick
+            d.tracer.Visible = true
+        else d.tracer.Visible = false end
 
-        if flags["snap_line"] and currentTarget==pl then
-            d.snapLine.From=Vector2.new(vp.X/2,vp.Y/2)
-            d.snapLine.To=Vector2.new(sp.X,sp.Y)
-            d.snapLine.Color=colors.snapLine
-            d.snapLine.Thickness=colors.snapThick
-            d.snapLine.Visible=true
-        else d.snapLine.Visible=false end
+        if flags["snap_line"] and currentTarget == pl then
+            d.snapLine.From = Vector2.new(vp.X/2,vp.Y/2); d.snapLine.To = Vector2.new(sp.X,sp.Y)
+            d.snapLine.Color = colors.snapLine; d.snapLine.Thickness = colors.snapThick
+            d.snapLine.Visible = true
+        else d.snapLine.Visible = false end
 
         if flags["skel_esp"] then
-            for i,pair in ipairs(SKEL_PAIRS) do
+            for i, pair in ipairs(SKEL_PAIRS) do
                 local p1 = c:FindFirstChild(pair[1])
                 local p2 = c:FindFirstChild(pair[2])
                 local ln = d.skeleton[i]
                 if p1 and p2 then
-                    local s1,on1 = cam:WorldToViewportPoint(p1.Position)
-                    local s2,on2 = cam:WorldToViewportPoint(p2.Position)
+                    local s1, on1 = cam:WorldToViewportPoint(p1.Position)
+                    local s2, on2 = cam:WorldToViewportPoint(p2.Position)
                     if on1 and on2 then
-                        ln.From=Vector2.new(s1.X,s1.Y)
-                        ln.To=Vector2.new(s2.X,s2.Y)
-                        ln.Color=colors.skel
-                        ln.Visible=true
-                    else ln.Visible=false end
-                else ln.Visible=false end
+                        ln.From = Vector2.new(s1.X,s1.Y); ln.To = Vector2.new(s2.X,s2.Y)
+                        ln.Color = colors.skel; ln.Visible = true
+                    else ln.Visible = false end
+                else ln.Visible = false end
             end
         else
-            for _,l in pairs(d.skeleton) do l.Visible=false end
+            for _, l in pairs(d.skeleton) do l.Visible = false end
+        end
+    end
+
+    -- Pickup ESP render pass
+    if pickupESPEnabled.ammo or pickupESPEnabled.hp then
+        refreshPickupESP()
+        for obj, d in pairs(pickupESPObjects) do
+            if not obj or not obj.Parent then continue end
+            local isAmmoObj = obj.Name == "DeadAmmo"
+            local show = (isAmmoObj and pickupESPEnabled.ammo) or (not isAmmoObj and pickupESPEnabled.hp)
+            if not show then
+                d.text.Visible = false; d.dist.Visible = false
+                for _, l in pairs(d.lines) do l.Visible = false end
+                continue
+            end
+
+            -- Find a representative BasePart position for this pickup
+            local rootPart = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart")
+            if not rootPart then continue end
+
+            local sp, onScreen = cam:WorldToViewportPoint(rootPart.Position)
+            if not onScreen then
+                d.text.Visible = false; d.dist.Visible = false
+                for _, l in pairs(d.lines) do l.Visible = false end
+                continue
+            end
+
+            local col      = d.color
+            local distVal  = rootPos and math.round((rootPart.Position - rootPos).Magnitude) or 0
+            local bw, bh   = 34, 34
+            local bxs      = sp.X - bw / 2
+            local bys      = sp.Y - bh / 2
+            local cLen     = 9
+
+            -- Label
+            d.text.Position = Vector2.new(sp.X, bys - 15)
+            d.text.Color    = col
+            d.text.Visible  = true
+
+            -- Distance below
+            d.dist.Text     = distVal .. "m"
+            d.dist.Position = Vector2.new(sp.X, bys + bh + 4)
+            d.dist.Color    = Color3.fromRGB(200,200,200)
+            d.dist.Visible  = true
+
+            -- Corner bracket lines (8 lines = full corner box)
+            local ln = d.lines
+            -- TL
+            ln[1].From=Vector2.new(bxs,      bys);      ln[1].To=Vector2.new(bxs+cLen,  bys)
+            ln[2].From=Vector2.new(bxs,      bys);      ln[2].To=Vector2.new(bxs,        bys+cLen)
+            -- TR
+            ln[3].From=Vector2.new(bxs+bw,  bys);      ln[3].To=Vector2.new(bxs+bw-cLen,bys)
+            ln[4].From=Vector2.new(bxs+bw,  bys);      ln[4].To=Vector2.new(bxs+bw,     bys+cLen)
+            -- BL
+            ln[5].From=Vector2.new(bxs,      bys+bh);  ln[5].To=Vector2.new(bxs+cLen,   bys+bh)
+            ln[6].From=Vector2.new(bxs,      bys+bh);  ln[6].To=Vector2.new(bxs,         bys+bh-cLen)
+            -- BR
+            ln[7].From=Vector2.new(bxs+bw,  bys+bh);  ln[7].To=Vector2.new(bxs+bw-cLen,bys+bh)
+            ln[8].From=Vector2.new(bxs+bw,  bys+bh);  ln[8].To=Vector2.new(bxs+bw,     bys+bh-cLen)
+            for _, l in pairs(ln) do l.Color = col; l.Visible = true end
         end
     end
 end)
 
+-- ====== MISC CONNECTIONS ======
+
 UIS.JumpRequest:Connect(function()
     if flags["inf_jump"] then
-        local h=getHum(); if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+        local h = getHum(); if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
     end
 end)
 
@@ -1320,17 +1790,9 @@ lp.CharacterAdded:Connect(function(char)
     cam.FieldOfView = flags["cam_fov"] or 70
     if flags["fly_on"]     then h.PlatformStand = true end
     task.wait(0.5)
-    if flags["chams_on"] then
-        for _,p in pairs(char:GetDescendants()) do
-            if p:IsA("BasePart") then
-                p:SetAttribute("__lx_mat", tostring(p.Material))
-                pcall(function()
-                    p.Material = Enum.Material[flags["chams_material"] or "Neon"]
-                    p.Color    = colors.chams
-                end)
-            end
-        end
-    end
+    -- Reapply chams and hitbox on respawn
+    if flags["chams_on"] then reapplyAllChams() end
+    if flags["hitbox_on"] or flags["silent_aim"] then updateAllHitboxes() end
 end)
 
 Players.PlayerAdded:Connect(function(pl)
@@ -1338,15 +1800,19 @@ Players.PlayerAdded:Connect(function(pl)
         task.wait(1)
         if flags["highlight_enemies"] then
             if not char:FindFirstChild("LunarHL") then
-                local hh=Instance.new("Highlight")
-                hh.Name="LunarHL"; hh.FillColor=colors.hlEnemy
-                hh.OutlineColor=Color3.new(1,1,1); hh.FillTransparency=0.5; hh.Parent=char
+                local hh = Instance.new("Highlight")
+                hh.Name = "LunarHL"; hh.FillColor = colors.hlEnemy
+                hh.OutlineColor = Color3.new(1,1,1); hh.FillTransparency = 0.5; hh.Parent = char
             end
         end
-
         task.wait(0.5)
-        applyChams(pl)
+        if flags["chams_on"] then applyChams(pl) end
+        if flags["hitbox_on"] or flags["silent_aim"] then expandHitbox(pl) end
+    end)
+    pl.CharacterRemoving:Connect(function()
+        hitboxOrigSizes[pl] = nil
     end)
 end)
 
+print("nigga im the king")
 notifications:create_notification({name="lunar x loaded"})
