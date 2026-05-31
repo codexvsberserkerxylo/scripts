@@ -1,4 +1,3 @@
--- made by .weound (nick) so dont fucking skid u fuckass skidder
 local library, notifications, themes = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Obelus/Library.lua"
 ))()
