@@ -2,35 +2,35 @@ local library, notifications, themes = loadstring(game:HttpGet(
     "https://raw.githubusercontent.com/i77lhm/Libraries/refs/heads/main/Obelus/Library.lua"
 ))()
 
--- ====== SERVICES ======
-local Players    = game:GetService("Players")
+
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UIS        = game:GetService("UserInputService")
-local Workspace  = game:GetService("Workspace")
-local Lighting   = game:GetService("Lighting")
+local UIS = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+local Lighting = game:GetService("Lighting")
 local RepStorage = game:GetService("ReplicatedStorage")
 
-local lp    = Players.LocalPlayer
-local cam   = Workspace.CurrentCamera
+local lp = Players.LocalPlayer
+local cam = Workspace.CurrentCamera
 local mouse = lp:GetMouse()
-local hex   = Color3.fromHex
+local hex = Color3.fromHex
 local flags = library.flags
-local dim2  = UDim2.new
+local dim2 = UDim2.new
 
--- ====== HELPERS ======
+
 local function getChar() return lp.Character end
-local function getHum()  local c = getChar(); return c and c:FindFirstChildOfClass("Humanoid") end
+local function getHum() local c = getChar(); return c and c:FindFirstChildOfClass("Humanoid") end
 local function getRoot() local c = getChar(); return c and c:FindFirstChild("HumanoidRootPart") end
 
--- ====== LIGHTING ORIGINALS ======
-local origAmbient    = Lighting.Ambient
-local origBrightness = Lighting.Brightness
-local origFogEnd     = Lighting.FogEnd
-local origFogStart   = Lighting.FogStart
-local desiredBrightness = Lighting.Brightness
-local desiredClockTime  = Lighting.ClockTime
 
--- ====== SKELETON PAIRS ======
+local origAmbient = Lighting.Ambient
+local origBrightness = Lighting.Brightness
+local origFogEnd = Lighting.FogEnd
+local origFogStart = Lighting.FogStart
+local desiredBrightness = Lighting.Brightness
+local desiredClockTime = Lighting.ClockTime
+
+
 local SKEL_PAIRS = {
     {"Head","UpperTorso"},
     {"UpperTorso","LowerTorso"},
@@ -48,37 +48,37 @@ local SKEL_PAIRS = {
     {"RightLowerLeg","RightFoot"},
 }
 
--- ====== COLOR TABLE ======
+
 local colors = {
-    box         = hex("#64B4FF"),
-    boxFill     = hex("#64B4FF"),
-    boxFillTr   = 0.4,
-    tracer      = Color3.new(1,1,1),
+    box = hex("
+    boxFill = hex("
+    boxFillTr = 0.4,
+    tracer = Color3.new(1,1,1),
     tracerThick = 1,
-    snapLine    = hex("#64B4FF"),
-    snapThick   = 1,
-    skel        = hex("#AA55EB"),
-    xhair       = Color3.new(1,1,1),
-    fov         = Color3.new(1,1,1),
-    fovTr       = 0,
-    hlEnemy     = hex("#64B4FF"),
-    chams       = hex("#64B4FF"),
+    snapLine = hex("
+    snapThick = 1,
+    skel = hex("
+    xhair = Color3.new(1,1,1),
+    fov = Color3.new(1,1,1),
+    fovTr = 0,
+    hlEnemy = hex("
+    chams = hex("
 }
 
--- ====== DRAWING UTIL ======
+
 local function newDraw(t, props)
     local d = Drawing.new(t)
     for k, v in pairs(props) do d[k] = v end
     return d
 end
 
--- ====== CROSSHAIR ======
+
 local xhairLines = {
-    top    = newDraw("Line",   {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
-    bottom = newDraw("Line",   {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
-    left   = newDraw("Line",   {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
-    right  = newDraw("Line",   {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
-    dot    = newDraw("Circle", {Radius=2, Filled=true, Visible=false, Color=Color3.new(1,1,1)}),
+    top = newDraw("Line", {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
+    bottom = newDraw("Line", {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
+    left = newDraw("Line", {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
+    right = newDraw("Line", {Thickness=2, Visible=false, Color=Color3.new(1,1,1)}),
+    dot = newDraw("Circle", {Radius=2, Filled=true, Visible=false, Color=Color3.new(1,1,1)}),
 }
 
 local fovCircle = newDraw("Circle", {
@@ -86,30 +86,30 @@ local fovCircle = newDraw("Circle", {
     Visible=false, Color=Color3.new(1,1,1), Radius=150,
 })
 
--- ====== PLAYER ESP OBJECTS ======
+
 local espObjects = {}
 
 local function buildESP(pl)
     if pl == lp then return end
     local corners = {}
     for i = 1, 8 do
-        corners[i] = newDraw("Line", {Thickness=2, Visible=false, Color=hex("#64B4FF")})
+        corners[i] = newDraw("Line", {Thickness=2, Visible=false, Color=hex("
     end
     local skeleton = {}
-    for i = 1, #SKEL_PAIRS do
-        skeleton[i] = newDraw("Line", {Thickness=1, Visible=false, Color=hex("#AA55EB")})
+    for i = 1,
+        skeleton[i] = newDraw("Line", {Thickness=1, Visible=false, Color=hex("
     end
     espObjects[pl] = {
-        box      = newDraw("Square", {Thickness=1, Filled=false,  Visible=false, Color=hex("#64B4FF")}),
-        boxFill  = newDraw("Square", {Filled=true,  Visible=false, Color=hex("#64B4FF"), Transparency=0.4}),
-        corners  = corners,
-        nameText = newDraw("Text",   {Size=13, Center=true, Outline=true, Visible=false, Color=Color3.new(1,1,1), Font=2}),
-        distText = newDraw("Text",   {Size=11, Center=true, Outline=true, Visible=false, Color=Color3.fromRGB(180,180,180), Font=2}),
-        hpBG     = newDraw("Square", {Filled=true,  Visible=false, Color=Color3.new(0,0,0)}),
-        hpBar    = newDraw("Square", {Filled=true,  Visible=false, Color=Color3.fromRGB(0,255,0)}),
-        hpText   = newDraw("Text",   {Size=10, Center=true, Outline=true, Visible=false, Color=Color3.new(1,1,1), Font=2}),
-        tracer   = newDraw("Line",   {Thickness=1, Visible=false, Color=Color3.new(1,1,1)}),
-        snapLine = newDraw("Line",   {Thickness=1, Visible=false, Color=hex("#64B4FF")}),
+        box = newDraw("Square", {Thickness=1, Filled=false, Visible=false, Color=hex("
+        boxFill = newDraw("Square", {Filled=true, Visible=false, Color=hex("
+        corners = corners,
+        nameText = newDraw("Text", {Size=13, Center=true, Outline=true, Visible=false, Color=Color3.new(1,1,1), Font=2}),
+        distText = newDraw("Text", {Size=11, Center=true, Outline=true, Visible=false, Color=Color3.fromRGB(180,180,180), Font=2}),
+        hpBG = newDraw("Square", {Filled=true, Visible=false, Color=Color3.new(0,0,0)}),
+        hpBar = newDraw("Square", {Filled=true, Visible=false, Color=Color3.fromRGB(0,255,0)}),
+        hpText = newDraw("Text", {Size=10, Center=true, Outline=true, Visible=false, Color=Color3.new(1,1,1), Font=2}),
+        tracer = newDraw("Line", {Thickness=1, Visible=false, Color=Color3.new(1,1,1)}),
+        snapLine = newDraw("Line", {Thickness=1, Visible=false, Color=hex("
         skeleton = skeleton,
     }
 end
@@ -131,9 +131,9 @@ for _, pl in pairs(Players:GetPlayers()) do buildESP(pl) end
 Players.PlayerAdded:Connect(buildESP)
 Players.PlayerRemoving:Connect(destroyESP)
 
--- ====== PICKUP ESP (Drawing-based, much better than BillboardGui) ======
-local pickupESPObjects  = {}
-local pickupESPEnabled  = {ammo=false, hp=false}
+
+local pickupESPObjects = {}
+local pickupESPEnabled = {ammo=false, hp=false}
 
 local function cleanupPickupESP()
     for obj, d in pairs(pickupESPObjects) do
@@ -150,18 +150,18 @@ end
 local function buildPickupESPFor(obj)
     if pickupESPObjects[obj] then return end
     local isAmmo = obj.Name == "DeadAmmo"
-    local col    = isAmmo and hex("#64B4FF") or hex("#00FF88")
-    local lines  = {}
+    local col = isAmmo and hex("
+    local lines = {}
     for i = 1, 8 do
         lines[i] = newDraw("Line", {Thickness=1, Visible=false, Color=col})
     end
     pickupESPObjects[obj] = {
-        text  = newDraw("Text", {
+        text = newDraw("Text", {
             Size=12, Center=true, Outline=true, Visible=false,
             Color=col, Font=2,
             Text = isAmmo and "[ AMMO BOX ]" or "[ HP JUG ]",
         }),
-        dist  = newDraw("Text", {
+        dist = newDraw("Text", {
             Size=10, Center=true, Outline=true, Visible=false,
             Color=Color3.fromRGB(200,200,200), Font=2,
         }),
@@ -176,14 +176,14 @@ local function refreshPickupESP()
     if not debris then return end
     for _, v in pairs(debris:GetChildren()) do
         local isAmmo = v.Name == "DeadAmmo" and pickupESPEnabled.ammo
-        local isHP   = v.Name == "DeadHP"   and pickupESPEnabled.hp
+        local isHP = v.Name == "DeadHP" and pickupESPEnabled.hp
         if isAmmo or isHP then
             buildPickupESPFor(v)
         end
     end
 end
 
--- ====== CHAMS (FIX: proper save/restore using attributes + color save) ======
+
 local function applyChams(pl)
     if pl == lp then return end
     local c = pl.Character
@@ -192,15 +192,15 @@ local function applyChams(pl)
     for _, p in pairs(c:GetDescendants()) do
         if p:IsA("BasePart") then
             pcall(function()
-                -- Save original values only once
+
                 if not p:GetAttribute("__lx_mat") then
-                    p:SetAttribute("__lx_mat",  p.Material.Name)
+                    p:SetAttribute("__lx_mat", p.Material.Name)
                     p:SetAttribute("__lx_colR", p.Color.R)
                     p:SetAttribute("__lx_colG", p.Color.G)
                     p:SetAttribute("__lx_colB", p.Color.B)
                 end
                 p.Material = mat
-                p.Color    = colors.chams
+                p.Color = colors.chams
             end)
         end
     end
@@ -212,13 +212,13 @@ local function removeChams(pl)
     for _, p in pairs(c:GetDescendants()) do
         if p:IsA("BasePart") then
             pcall(function()
-                local m  = p:GetAttribute("__lx_mat")
+                local m = p:GetAttribute("__lx_mat")
                 local cr = p:GetAttribute("__lx_colR")
                 local cg = p:GetAttribute("__lx_colG")
                 local cb = p:GetAttribute("__lx_colB")
                 if m then
                     p.Material = Enum.Material[m]
-                    p:SetAttribute("__lx_mat",  nil)
+                    p:SetAttribute("__lx_mat", nil)
                 end
                 if cr ~= nil and cg ~= nil and cb ~= nil then
                     p.Color = Color3.new(cr, cg, cb)
@@ -240,7 +240,7 @@ local function reapplyAllChams()
 end
 
 local hitboxOrigSizes = {}
-local HITBOX_PARTS    = {"Head","UpperTorso","LowerTorso","HumanoidRootPart","LeftUpperArm","RightUpperArm","LeftUpperLeg","RightUpperLeg"}
+local HITBOX_PARTS = {"Head","UpperTorso","LowerTorso","HumanoidRootPart","LeftUpperArm","RightUpperArm","LeftUpperLeg","RightUpperLeg"}
 
 local function expandHitbox(pl)
     if pl == lp then return end
@@ -283,7 +283,7 @@ local function updateAllHitboxes()
     end
 end
 
--- Hitbox continuous enforcement loop
+
 task.spawn(function()
     while true do
         task.wait(0.1)
@@ -293,21 +293,21 @@ task.spawn(function()
     end
 end)
 
--- ====== SILENT AIM IMPLEMENTATION ======
--- Dual approach:
---   1) __namecall hook redirects FindPartOnRayWithIgnoreList to closest enemy part
---      (open-source pattern by community, standard for Arsenal)
---   2) __index hook redirects Mouse.Hit / Mouse.Target
--- Silent Aim also enables hitbox expansion for maximum hit registration
 
-local silentAimTarget   = nil   -- used by __index hook
-local silentAimBodyPart = nil   -- used by __namecall hook + RenderStep finder
 
--- RenderStep: find closest body part from cursor for __namecall redirect
+
+
+
+
+
+local silentAimTarget = nil
+local silentAimBodyPart = nil
+
+
 local function findClosestPartFromCursor()
-    local mousePos    = UIS:GetMouseLocation()
+    local mousePos = UIS:GetMouseLocation()
     local closestDist = math.huge
-    local closest     = nil
+    local closest = nil
 
     for _, pl in pairs(Players:GetPlayers()) do
         if pl == lp then continue end
@@ -323,7 +323,7 @@ local function findClosestPartFromCursor()
                     local dist = (Vector2.new(sp.X, sp.Y) - mousePos).Magnitude
                     if dist < closestDist then
                         closestDist = dist
-                        closest     = part
+                        closest = part
                     end
                 end
             end
@@ -341,12 +341,12 @@ RunService:BindToRenderStep("__lx_silentPartFinder", 120, function()
     end
 end)
 
--- __namecall hook: redirect ray-based shooting to closest part
--- Source: open-source community pattern for Arsenal silent aim
+
+
 local oldNameCall
 oldNameCall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
     local method = getnamecallmethod()
-    local args   = {...}
+    local args = {...}
     if not checkcaller() and flags["silent_aim"] and silentAimBodyPart and silentAimBodyPart.Parent then
         if method == "FindPartOnRayWithIgnoreList" or method == "FindPartOnRay" then
             args[1] = Ray.new(
@@ -359,7 +359,7 @@ oldNameCall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
     return oldNameCall(self, ...)
 end))
 
--- __index hook: redirect Mouse.Hit / Mouse.Target / Mouse.UnitRay
+
 local oldIndex
 oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
     if not checkcaller() then
@@ -374,8 +374,8 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
                     local part = t.Character:FindFirstChild(flags["aim_part"] or "Head")
                         or t.Character:FindFirstChild("HumanoidRootPart")
                     if part then
-                        if key == "Hit"     then return CFrame.new(part.Position) end
-                        if key == "Target"  then return part end
+                        if key == "Hit" then return CFrame.new(part.Position) end
+                        if key == "Target" then return part end
                         if key == "UnitRay" then
                             return Ray.new(
                                 cam.CFrame.Position,
@@ -390,12 +390,12 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
     return oldIndex(self, key)
 end))
 
--- ====== COLOR SKINS (ported from open-source AdvanceTech Arsenal script) ======
+
 local skinColors = {arm=Color3.fromRGB(50,50,50), gun=Color3.fromRGB(50,50,50)}
-local skinMats   = {arm="Plastic", gun="Plastic"}
-local armSkinOn  = false
-local gunSkinOn  = false
-local rainbowOn  = false
+local skinMats = {arm="Plastic", gun="Plastic"}
+local armSkinOn = false
+local gunSkinOn = false
+local rainbowOn = false
 local rainbowHue = 0
 
 local function applyArmSkin()
@@ -404,10 +404,10 @@ local function applyArmSkin()
     for _, v in pairs(arms:GetDescendants()) do
         if v:IsA("BasePart") and (v.Name == "Right Arm" or v.Name == "Left Arm"
             or v.Name == "RightHand" or v.Name == "LeftHand"
-            or v.Name == "RightArm"  or v.Name == "LeftArm") then
+            or v.Name == "RightArm" or v.Name == "LeftArm") then
             pcall(function()
                 v.Material = Enum.Material[skinMats.arm]
-                v.Color    = skinColors.arm
+                v.Color = skinColors.arm
             end)
         end
     end
@@ -420,7 +420,7 @@ local function applyGunSkin()
         if v:IsA("MeshPart") then
             pcall(function()
                 v.Material = Enum.Material[skinMats.gun]
-                v.Color    = skinColors.gun
+                v.Color = skinColors.gun
             end)
         end
     end
@@ -442,7 +442,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ====== WINDOW ======
+
 local window = library:window({
     name = os.date('<font color="rgb(100,180,255)">lunar x</font> | <font color="rgb(170,85,235)">arsenal</font> | %b %d %Y'),
     size = dim2(0, 540, 0, 580),
@@ -450,25 +450,25 @@ local window = library:window({
 
 library.gui.DisplayOrder = 999
 
-local AimbotTab   = window:tab({name="Aimbot"  })
-local VisualsTab  = window:tab({name="Visuals" })
+local AimbotTab = window:tab({name="Aimbot" })
+local VisualsTab = window:tab({name="Visuals" })
 local MovementTab = window:tab({name="Movement"})
-local WeaponTab   = window:tab({name="Weapon"  })
-local PlayerTab   = window:tab({name="Player"  })
-local MiscTab     = window:tab({name="Misc"    })
+local WeaponTab = window:tab({name="Weapon" })
+local PlayerTab = window:tab({name="Player" })
+local MiscTab = window:tab({name="Misc" })
 local SettingsTab = window:tab({name="Settings"})
 
--- ====== AIMBOT TAB ======
+
 do
     local c1 = AimbotTab:column({fill=true})
     local c2 = AimbotTab:column({fill=true})
 
     local sec = c1:section({name="Aimbot"})
-    sec:addToggle({name="Aimbot",      flag="aim_on",         default=false, callback=function() end})
-       :addKeyBind({flag="aim_key",    key=Enum.KeyCode.E,    mode="hold",   callback=function() end})
+    sec:addToggle({name="Aimbot", flag="aim_on", default=false, callback=function() end})
+       :addKeyBind({flag="aim_key", key=Enum.KeyCode.E, mode="hold", callback=function() end})
 
-    -- Silent Aim = hitbox expand + ray/mouse redirect (dual method)
-    sec:addToggle({name="Silent Aim",  flag="silent_aim",     default=false,
+
+    sec:addToggle({name="Silent Aim", flag="silent_aim", default=false,
         callback=function(v)
             if v then
                 updateAllHitboxes()
@@ -476,16 +476,16 @@ do
             else
                 for _, pl in pairs(Players:GetPlayers()) do restoreHitbox(pl) end
                 silentAimBodyPart = nil
-                silentAimTarget   = nil
+                silentAimTarget = nil
             end
         end})
 
-    sec:addToggle({name="Trigger Bot", flag="triggerbot",     default=false, callback=function() end})
-       :addKeyBind({flag="trigger_key",key=Enum.KeyCode.Q,    mode="hold",   callback=function() end})
-    sec:addToggle({name="Team Check",  flag="aim_team_check", default=false, callback=function() end})
-    sec:addToggle({name="Prediction",  flag="aim_prediction", default=false, callback=function() end})
-    sec:addToggle({name="Wallbang",    flag="wallbang",       default=false, callback=function() end})
-    sec:addToggle({name="Rage Mode",   flag="rage_mode",      default=false,
+    sec:addToggle({name="Trigger Bot", flag="triggerbot", default=false, callback=function() end})
+       :addKeyBind({flag="trigger_key",key=Enum.KeyCode.Q, mode="hold", callback=function() end})
+    sec:addToggle({name="Team Check", flag="aim_team_check", default=false, callback=function() end})
+    sec:addToggle({name="Prediction", flag="aim_prediction", default=false, callback=function() end})
+    sec:addToggle({name="Wallbang", flag="wallbang", default=false, callback=function() end})
+    sec:addToggle({name="Rage Mode", flag="rage_mode", default=false,
         callback=function(v)
             if v then notifications:create_notification({name="rage mode on"}) end
         end})
@@ -497,15 +497,15 @@ do
     cfg:addDropdown({name="Priority", flag="aim_priority",
         items={"Nearest Mouse","Nearest Distance","Lowest HP","Line of Sight"},
         default="Nearest Mouse", callback=function() end})
-    cfg:addSlider({name="Smoothness",   flag="aim_smooth",    min=0.01,max=1,   default=0.15, interval=0.01,suffix="x"})
-    cfg:addSlider({name="Max Distance", flag="aim_max_dist",  min=50,  max=2000,default=500,  interval=10,  suffix=" st"})
-    cfg:addSlider({name="Hit Chance",   flag="aim_hit_chance",min=1,   max=100, default=100,  interval=1,   suffix="%"})
-    cfg:addSlider({name="Pred Offset",  flag="aim_pred_val",  min=0,   max=1,   default=0.1,  interval=0.01,suffix="s"})
+    cfg:addSlider({name="Smoothness", flag="aim_smooth", min=0.01,max=1, default=0.15, interval=0.01,suffix="x"})
+    cfg:addSlider({name="Max Distance", flag="aim_max_dist", min=50, max=2000,default=500, interval=10, suffix=" st"})
+    cfg:addSlider({name="Hit Chance", flag="aim_hit_chance",min=1, max=100, default=100, interval=1, suffix="%"})
+    cfg:addSlider({name="Pred Offset", flag="aim_pred_val", min=0, max=1, default=0.1, interval=0.01,suffix="s"})
 
     local fovSec = c2:section({name="FOV Circle"})
     fovSec:addToggle({name="Visible", flag="fov_visible", default=false,
         callback=function(v) fovCircle.Visible = v end})
-    fovSec:addToggle({name="Filled",  flag="fov_filled",  default=false,
+    fovSec:addToggle({name="Filled", flag="fov_filled", default=false,
         callback=function(v) fovCircle.Filled = v end})
     fovSec:addLabel({name="FOV Color"}):addColorPicker({flag="fov_color",
         color=Color3.new(1,1,1),
@@ -513,12 +513,12 @@ do
             colors.fov = c; colors.fovTr = a
             fovCircle.Color = c; fovCircle.Transparency = a
         end})
-    fovSec:addSlider({name="Radius",    flag="fov_radius",    min=10,max=600,default=150,interval=5,  suffix="px",
+    fovSec:addSlider({name="Radius", flag="fov_radius", min=10,max=600,default=150,interval=5, suffix="px",
         callback=function(v) fovCircle.Radius = v end})
-    fovSec:addSlider({name="Thickness", flag="fov_thickness", min=1, max=5,  default=1,  interval=1,  suffix="px",
+    fovSec:addSlider({name="Thickness", flag="fov_thickness", min=1, max=5, default=1, interval=1, suffix="px",
         callback=function(v) fovCircle.Thickness = v end})
 
-    -- Hitbox expander (also acts as silent aim backbone)
+
     local hbSec = c2:section({name="Hitbox Expander"})
     hbSec:addToggle({name="Hitbox Expander", flag="hitbox_on", default=false,
         callback=function(v)
@@ -532,7 +532,7 @@ do
 
     local indSec = c2:section({name="Target Indicator"})
     local snapT = indSec:addToggle({name="Snap Line", flag="snap_line", default=false, folding=true, callback=function() end})
-    snapT:addColorPicker({flag="snap_line_color", color=hex("#64B4FF"),
+    snapT:addColorPicker({flag="snap_line_color", color=hex("
         callback=function(c,a)
             colors.snapLine = c
             for _, d in pairs(espObjects) do d.snapLine.Color = c end
@@ -542,7 +542,7 @@ do
 
     local trigSec = c2:section({name="Trigger Config"})
     trigSec:addSlider({name="Trigger Delay", flag="trigger_delay", min=0.0001,max=0.5,default=0.01,interval=0.0001,suffix="s"})
-    trigSec:addSlider({name="Trigger FOV",   flag="trigger_fov",   min=1,   max=300,default=80,  interval=1,  suffix="px"})
+    trigSec:addSlider({name="Trigger FOV", flag="trigger_fov", min=1, max=300,default=80, interval=1, suffix="px"})
 end
 
 do
@@ -550,13 +550,13 @@ do
     local c2 = VisualsTab:column({fill=true})
 
     local espSec = c1:section({name="Player ESP"})
-    espSec:addToggle({name="ESP Enabled",  flag="esp_on",       default=false, callback=function() end})
+    espSec:addToggle({name="ESP Enabled", flag="esp_on", default=false, callback=function() end})
     espSec:addSlider({name="Max Distance", flag="esp_max_dist", min=50,max=3000,default=800,interval=50,suffix=" st"})
-    espSec:addDropdown({name="Box Style",  flag="box_style",
+    espSec:addDropdown({name="Box Style", flag="box_style",
         items={"None","Full Box","Corner Box"}, default="Corner Box", callback=function() end})
 
     local boxT = espSec:addToggle({name="Box ESP", flag="box_esp", default=true, folding=true, callback=function() end})
-    boxT:addColorPicker({flag="box_color", color=hex("#64B4FF"),
+    boxT:addColorPicker({flag="box_color", color=hex("
         callback=function(c,a)
             colors.box = c
             for _, d in pairs(espObjects) do
@@ -565,7 +565,7 @@ do
             end
         end})
     boxT:addToggle({name="Filled", flag="box_fill", default=false, callback=function() end})
-    boxT:addColorPicker({flag="box_fill_color", color=hex("#64B4FF"), alpha=0.6,
+    boxT:addColorPicker({flag="box_fill_color", color=hex("
         callback=function(c,a)
             colors.boxFill = c; colors.boxFillTr = 1 - a
             for _, d in pairs(espObjects) do
@@ -584,15 +584,15 @@ do
     tracerT:addSlider({name="Thickness", flag="tracer_thick", min=1,max=4,default=1,interval=1,suffix="px",
         callback=function(v) colors.tracerThick = v end})
 
-    espSec:addToggle({name="Name ESP",     flag="name_esp", default=false, callback=function() end})
+    espSec:addToggle({name="Name ESP", flag="name_esp", default=false, callback=function() end})
     espSec:addToggle({name="Distance ESP", flag="dist_esp", default=false, callback=function() end})
 
     local hpT = espSec:addToggle({name="Health Bar", flag="hp_esp", default=false, folding=true, callback=function() end})
-    hpT:addToggle({name="Color by HP",  flag="hp_color_gradient", default=true,  callback=function() end})
-    hpT:addToggle({name="Show HP Text", flag="hp_text",           default=false, callback=function() end})
+    hpT:addToggle({name="Color by HP", flag="hp_color_gradient", default=true, callback=function() end})
+    hpT:addToggle({name="Show HP Text", flag="hp_text", default=false, callback=function() end})
 
     local skelT = espSec:addToggle({name="Skeleton ESP", flag="skel_esp", default=false, folding=true, callback=function() end})
-    skelT:addColorPicker({flag="skel_color", color=hex("#AA55EB"),
+    skelT:addColorPicker({flag="skel_color", color=hex("
         callback=function(c,a)
             colors.skel = c
             for _, d in pairs(espObjects) do
@@ -632,38 +632,38 @@ do
             end
         end})
 
-    -- Crosshair
+
     local xhairSec = c1:section({name="Custom Crosshair"})
     xhairSec:addToggle({name="Crosshair", flag="xhair_on", default=false,
         callback=function(v)
             if not v then for _, l in pairs(xhairLines) do l.Visible = false end end
         end})
-    xhairSec:addSlider({name="Size",      flag="xhair_size",  min=2, max=30,default=10,interval=1,suffix="px"})
-    xhairSec:addSlider({name="Gap",       flag="xhair_gap",   min=0, max=15,default=3, interval=1,suffix="px"})
+    xhairSec:addSlider({name="Size", flag="xhair_size", min=2, max=30,default=10,interval=1,suffix="px"})
+    xhairSec:addSlider({name="Gap", flag="xhair_gap", min=0, max=15,default=3, interval=1,suffix="px"})
     xhairSec:addSlider({name="Thickness", flag="xhair_thick", min=1, max=5, default=2, interval=1,suffix="px"})
-    xhairSec:addToggle({name="Dot",       flag="xhair_dot",   default=true, callback=function() end})
+    xhairSec:addToggle({name="Dot", flag="xhair_dot", default=true, callback=function() end})
     xhairSec:addLabel({name="Color"}):addColorPicker({flag="xhair_color", color=Color3.new(1,1,1),
         callback=function(c,a)
             colors.xhair = c
             for _, l in pairs(xhairLines) do l.Color = c end
         end})
 
-    -- World
+
     local worldSec = c2:section({name="World"})
     worldSec:addToggle({name="Fullbright", flag="fullbright", default=false,
         callback=function(v)
             if v then
-                Lighting.Ambient    = Color3.fromRGB(178,178,178)
+                Lighting.Ambient = Color3.fromRGB(178,178,178)
                 Lighting.Brightness = 2
             else
-                Lighting.Ambient    = origAmbient
+                Lighting.Ambient = origAmbient
                 Lighting.Brightness = desiredBrightness
-                Lighting.ClockTime  = desiredClockTime
+                Lighting.ClockTime = desiredClockTime
             end
         end})
     worldSec:addToggle({name="Remove Fog", flag="remove_fog", default=false,
         callback=function(v)
-            Lighting.FogEnd   = v and 1e6 or origFogEnd
+            Lighting.FogEnd = v and 1e6 or origFogEnd
             Lighting.FogStart = v and 1e6 or origFogStart
         end})
     worldSec:addToggle({name="No Particles", flag="no_particles", default=false,
@@ -678,7 +678,7 @@ do
             end
         end})
 
-    -- FIX: brightness/time sliders now store desired values and work independently of fullbright
+
     worldSec:addSlider({name="Brightness", flag="world_brightness", min=0,max=5,default=1,interval=0.1,suffix="x",
         callback=function(v)
             desiredBrightness = v
@@ -705,7 +705,7 @@ do
                 end
             end
         end})
-    hlSec:addColorPicker({flag="hl_enemy_fill", color=hex("#64B4FF"),
+    hlSec:addColorPicker({flag="hl_enemy_fill", color=hex("
         callback=function(c,a)
             colors.hlEnemy = c
             for _, pl in pairs(Players:GetPlayers()) do
@@ -721,12 +721,12 @@ do
             local ex = c:FindFirstChild("LunarSelfHL")
             if v and not ex then
                 local h = Instance.new("Highlight")
-                h.Name = "LunarSelfHL"; h.FillColor = hex("#AA55EB")
+                h.Name = "LunarSelfHL"; h.FillColor = hex("
                 h.OutlineColor = Color3.new(1,1,1); h.FillTransparency = 0.6; h.Parent = c
             elseif not v and ex then ex:Destroy() end
         end})
 
-    -- FIX: Chams fully rewritten to actually work
+
     local chamsSec = c2:section({name="Chams"})
     local chamsT = chamsSec:addToggle({name="Chams", flag="chams_on", default=false, folding=true,
         callback=function(v)
@@ -741,13 +741,13 @@ do
                 end
             end
         end})
-    chamsT:addColorPicker({flag="chams_color", color=hex("#64B4FF"),
+    chamsT:addColorPicker({flag="chams_color", color=hex("
         callback=function(c,a)
             colors.chams = c
             if flags["chams_on"] then reapplyAllChams() end
         end})
 
-    -- Color Skins (ported from AdvanceTech open-source Arsenal script)
+
     local skinsSec = c2:section({name="Color Skins"})
 
     local armT = skinsSec:addToggle({name="Arm Charms", flag="arm_charm", default=false, folding=true,
@@ -770,7 +770,7 @@ do
         callback=function(v) rainbowOn = v; rainbowHue = 0 end})
 end
 
--- ====== MOVEMENT TAB ======
+
 do
     local c1 = MovementTab:column({fill=true})
     local c2 = MovementTab:column({fill=true})
@@ -799,34 +799,34 @@ do
     local flyConn, bodyVel, bodyGyro
 
     local function stopFly()
-        if flyConn  then flyConn:Disconnect();  flyConn  = nil end
-        if bodyVel  then bodyVel:Destroy();     bodyVel  = nil end
-        if bodyGyro then bodyGyro:Destroy();    bodyGyro = nil end
+        if flyConn then flyConn:Disconnect(); flyConn = nil end
+        if bodyVel then bodyVel:Destroy(); bodyVel = nil end
+        if bodyGyro then bodyGyro:Destroy(); bodyGyro = nil end
     end
 
     local function startFly()
         stopFly()
         local r = getRoot(); if not r then return end
         bodyVel = Instance.new("BodyVelocity")
-        bodyVel.Velocity  = Vector3.zero
-        bodyVel.MaxForce  = Vector3.new(1e5,1e5,1e5)
-        bodyVel.Parent    = r
+        bodyVel.Velocity = Vector3.zero
+        bodyVel.MaxForce = Vector3.new(1e5,1e5,1e5)
+        bodyVel.Parent = r
         bodyGyro = Instance.new("BodyGyro")
         bodyGyro.MaxTorque = Vector3.new(1e5,1e5,1e5)
-        bodyGyro.P         = 1e4
-        bodyGyro.Parent    = r
+        bodyGyro.P = 1e4
+        bodyGyro.Parent = r
         flyConn = RunService.RenderStepped:Connect(function()
             if not flags["fly_on"] then stopFly(); return end
             local r2 = getRoot(); if not r2 then stopFly(); return end
             local dir = Vector3.zero
-            if UIS:IsKeyDown(Enum.KeyCode.W)           then dir += cam.CFrame.LookVector  end
-            if UIS:IsKeyDown(Enum.KeyCode.S)           then dir -= cam.CFrame.LookVector  end
-            if UIS:IsKeyDown(Enum.KeyCode.A)           then dir -= cam.CFrame.RightVector end
-            if UIS:IsKeyDown(Enum.KeyCode.D)           then dir += cam.CFrame.RightVector end
-            if UIS:IsKeyDown(Enum.KeyCode.Space)       then dir += Vector3.new(0,1,0)     end
-            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0)     end
+            if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
+            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
             bodyVel.Velocity = dir.Magnitude > 0 and dir.Unit * (flags["fly_speed"] or 60) or Vector3.zero
-            bodyGyro.CFrame  = cam.CFrame
+            bodyGyro.CFrame = cam.CFrame
         end)
     end
 
@@ -875,7 +875,7 @@ do
     blinkSec:addSlider({name="Distance", flag="blink_dist", min=5,max=200,default=40,interval=5,suffix=" st"})
 end
 
--- ====== WEAPON TAB ======
+
 do
     local c1 = WeaponTab:column({fill=true})
     local c2 = WeaponTab:column({fill=true})
@@ -887,7 +887,7 @@ do
         return ws and ws:GetChildren() or {}
     end
 
-    -- Save/restore helpers with original value tracking
+
     local origWeaponVals = {}
     local function saveWV(w, name)
         if not origWeaponVals[w] then origWeaponVals[w] = {} end
@@ -947,7 +947,7 @@ do
             end
         end})
 
-    -- Always Auto (from AdvanceTech open-source script)
+
     modSec:addToggle({name="Always Auto", flag="always_auto", default=false,
         callback=function(v)
             for _, w in pairs(getWeapons()) do
@@ -961,7 +961,7 @@ do
             end
         end})
 
-    -- Fast Reload (from AdvanceTech open-source script)
+
     modSec:addToggle({name="Fast Reload", flag="fast_reload", default=false,
         callback=function(v)
             for _, w in pairs(getWeapons()) do
@@ -1001,7 +1001,7 @@ do
 
         pcall(function()
             local vars = lp.PlayerGui.GUI.Client.Variables
-            if vars.ammocount.Value  ~= 677 then vars.ammocount.Value  = 677 end
+            if vars.ammocount.Value ~= 677 then vars.ammocount.Value = 677 end
             if vars.ammocount2.Value ~= 677 then vars.ammocount2.Value = 677 end
         end)
         pcall(function()
@@ -1053,8 +1053,8 @@ do
     local killAllThread = nil
 
     local function isPlayerAlive(pl)
-        local c   = pl.Character
-        local h   = c and c:FindFirstChildOfClass("Humanoid")
+        local c = pl.Character
+        local h = c and c:FindFirstChildOfClass("Humanoid")
         local hrp = c and c:FindFirstChild("HumanoidRootPart")
         return (c ~= nil) and (h ~= nil) and (hrp ~= nil) and (h.Health > 0)
     end
@@ -1066,7 +1066,7 @@ do
             if flags["kill_team_check"] and pl.Team == lp.Team then continue end
             if isPlayerAlive(pl) then table.insert(list, pl) end
         end
-        for i = #list, 2, -1 do
+        for i =
             local j = math.random(1, i); list[i], list[j] = list[j], list[i]
         end
         return list
@@ -1075,7 +1075,7 @@ do
     local function runKillAll()
         while killAllActive do
             local enemies = getAliveEnemies()
-            if #enemies == 0 then task.wait(0.5); continue end
+            if
 
             for _, target in ipairs(enemies) do
                 if not killAllActive then return end
@@ -1089,13 +1089,13 @@ do
                 if not isPlayerAlive(target) then continue end
 
                 local engageStart = tick()
-                local maxEngage   = flags["kill_engage_time"] or 4
+                local maxEngage = flags["kill_engage_time"] or 4
 
                 while killAllActive do
-                    local r    = getRoot()
-                    local c    = target.Character
-                    local h    = c and c:FindFirstChildOfClass("Humanoid")
-                    local hrp  = c and c:FindFirstChild("HumanoidRootPart")
+                    local r = getRoot()
+                    local c = target.Character
+                    local h = c and c:FindFirstChildOfClass("Humanoid")
+                    local hrp = c and c:FindFirstChild("HumanoidRootPart")
                     local head = c and c:FindFirstChild("Head")
 
                     if not r or not c or not h or not hrp then break end
@@ -1144,8 +1144,8 @@ do
                    notifications:create_notification({name="kill all off"})
                end
            end})
-    utilSec:addToggle({name="Team Check",      flag="kill_team_check",  default=true, callback=function() end})
-    utilSec:addSlider({name="TP Delay",        flag="kill_delay",       min=0.001,max=0.5,default=0.06,interval=0.001,suffix="s"})
+    utilSec:addToggle({name="Team Check", flag="kill_team_check", default=true, callback=function() end})
+    utilSec:addSlider({name="TP Delay", flag="kill_delay", min=0.001,max=0.5,default=0.06,interval=0.001,suffix="s"})
     utilSec:addSlider({name="Max Engage Time", flag="kill_engage_time", min=0.5,max=10,default=4,interval=0.5,suffix="s"})
 
     local spinConn
@@ -1164,7 +1164,7 @@ do
     utilSec:addSlider({name="Spin Speed", flag="spin_speed", min=10,max=720,default=180,interval=10,suffix="°/s"})
 end
 
--- ====== PLAYER TAB ======
+
 do
     local c1 = PlayerTab:column({fill=true})
     local c2 = PlayerTab:column({fill=true})
@@ -1173,11 +1173,11 @@ do
     tpSec:addButton({name="Teleport to Cursor",
         callback=function()
             local r = getRoot(); if not r then return end
-            local ray    = cam:ScreenPointToRay(mouse.X, mouse.Y)
+            local ray = cam:ScreenPointToRay(mouse.X, mouse.Y)
             local result = Workspace:Raycast(ray.Origin, ray.Direction * 1000)
             r.CFrame = result
                 and CFrame.new(result.Position + Vector3.new(0,3,0))
-                or  CFrame.new(cam.CFrame.Position + cam.CFrame.LookVector * 20)
+                or CFrame.new(cam.CFrame.Position + cam.CFrame.LookVector * 20)
         end})
     tpSec:addButton({name="Teleport to Nearest",
         callback=function()
@@ -1214,7 +1214,7 @@ do
         end})
 
     local targetSec = c1:section({name="Target Player"})
-    local plrNames  = {"(none)"}
+    local plrNames = {"(none)"}
     for _, pl in pairs(Players:GetPlayers()) do
         if pl ~= lp then table.insert(plrNames, pl.Name) end
     end
@@ -1276,7 +1276,7 @@ do
         callback=function(v) cam.FieldOfView = v end})
 end
 
--- ====== MISC TAB ======
+
 do
     local c1 = MiscTab:column({fill=true})
     local notifSec = c1:section({name="Notifications"})
@@ -1292,17 +1292,17 @@ do
         end})
 end
 
--- ====== SETTINGS TAB ======
+
 do
     local c1 = SettingsTab:column({fill=true})
     local c2 = SettingsTab:column({fill=true})
     local cfgSec = c1:section({name="Config"})
 
-    -- FIX: ensure directories exist before any file operations
+
     local cfgDir = library.directory .. "/configs"
     pcall(function()
         if not isfolder(library.directory) then makefolder(library.directory) end
-        if not isfolder(cfgDir)            then makefolder(cfgDir) end
+        if not isfolder(cfgDir) then makefolder(cfgDir) end
     end)
 
     cfgSec:addList({name="Configs", flag="cfg_list", scale=100})
@@ -1366,11 +1366,11 @@ do
     local uiSec = c2:section({name="UI"})
     local menuOpen = true
 
-    -- FIX: Mouse is fully freed when menu is hidden
+
     local function applyMenuMouseState(open)
         if not open then
             pcall(function()
-                UIS.MouseBehavior    = Enum.MouseBehavior.Default
+                UIS.MouseBehavior = Enum.MouseBehavior.Default
                 UIS.MouseIconEnabled = true
             end)
         end
@@ -1390,7 +1390,7 @@ do
     uiSec:addButton({name="Unload Menu", callback=function() library:unloadMenu() end})
 end
 
--- ====== TARGET SELECTION ======
+
 
 local function makeRayParams()
     local rp = RaycastParams.new()
@@ -1401,20 +1401,20 @@ local function makeRayParams()
 end
 
 local function getTarget()
-    local mousePos  = UIS:GetMouseLocation()
-    local fov       = flags["fov_radius"]   or 150
-    local maxDist   = flags["aim_max_dist"] or 500
-    local root      = getRoot()
+    local mousePos = UIS:GetMouseLocation()
+    local fov = flags["fov_radius"] or 150
+    local maxDist = flags["aim_max_dist"] or 500
+    local root = getRoot()
     local best, bestScore = nil, math.huge
-    local wallbang  = flags["wallbang"]
+    local wallbang = flags["wallbang"]
 
     for _, pl in pairs(Players:GetPlayers()) do
         if pl == lp then continue end
         if flags["aim_team_check"] and pl.Team == lp.Team then continue end
-        local c    = pl.Character
-        local h    = c and c:FindFirstChildOfClass("Humanoid")
+        local c = pl.Character
+        local h = c and c:FindFirstChildOfClass("Humanoid")
         local part = c and c:FindFirstChild(flags["aim_part"] or "Head")
-        local hrp  = c and c:FindFirstChild("HumanoidRootPart")
+        local hrp = c and c:FindFirstChild("HumanoidRootPart")
         if not (c and h and part and hrp and h.Health > 0) then continue end
         if root and (hrp.Position - root.Position).Magnitude > maxDist then continue end
 
@@ -1434,7 +1434,7 @@ local function getTarget()
             score = h.Health
         elseif priority == "Line of Sight" then
             if wallbang then
-                -- FIX: wallbang skips all LOS, treats as nearest mouse
+
                 score = screenDist
             else
                 local rp = makeRayParams()
@@ -1451,11 +1451,11 @@ local function getTarget()
     return best
 end
 
--- ====== TRIGGER BOT (FIX: uses mouse.Target like AdvanceTech working version) ======
--- Source: AdvanceTech Arsenal open-source triggerbot (mouse.Target approach)
+
+
 
 local triggerCooldown = 0
-local triggerAlive    = true
+local triggerAlive = true
 
 local function hookTriggerHumanoid(char)
     local h = char:FindFirstChildOfClass("Humanoid") or char:WaitForChild("Humanoid", 5)
@@ -1479,7 +1479,7 @@ RunService.RenderStepped:Connect(function()
     local now = tick()
     if now - triggerCooldown < (flags["trigger_delay"] or 0.08) then return end
 
-    -- Primary: direct mouse.Target check (works perfectly with hitbox expander)
+
     local tgt = mouse.Target
     if tgt and tgt.Parent then
         local h = tgt.Parent:FindFirstChild("Humanoid")
@@ -1494,15 +1494,15 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Fallback / wallbang path: screen-space proximity check
+
     if flags["wallbang"] then
         local mousePos = UIS:GetMouseLocation()
-        local tfov     = flags["trigger_fov"] or 80
+        local tfov = flags["trigger_fov"] or 80
         for _, pl in pairs(Players:GetPlayers()) do
             if pl == lp then continue end
             if not isEnemyPlayer(pl) then continue end
-            local c   = pl.Character
-            local h   = c and c:FindFirstChildOfClass("Humanoid")
+            local c = pl.Character
+            local h = c and c:FindFirstChildOfClass("Humanoid")
             local hrp = c and c:FindFirstChild("HumanoidRootPart")
             if not (c and h and hrp and h.Health > 0) then continue end
             local sp, onScreen = cam:WorldToViewportPoint(hrp.Position)
@@ -1516,12 +1516,12 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- ====== MAIN RENDER LOOP ======
+
 
 RunService.RenderStepped:Connect(function()
-    local mp      = UIS:GetMouseLocation()
-    local vp      = cam.ViewportSize
-    local espOn   = flags["esp_on"]
+    local mp = UIS:GetMouseLocation()
+    local vp = cam.ViewportSize
+    local espOn = flags["esp_on"]
     local rootPos = getRoot() and getRoot().Position
 
     fovCircle.Position = Vector2.new(mp.X, mp.Y)
@@ -1529,7 +1529,7 @@ RunService.RenderStepped:Connect(function()
     local currentTarget = getTarget()
     silentAimTarget = (flags["silent_aim"] and currentTarget) or nil
 
-    -- Aimbot
+
     if flags["aim_on"] then
         local aimKey = flags["aim_key"]
         if aimKey and aimKey.active and currentTarget and currentTarget.Character then
@@ -1550,33 +1550,33 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Crosshair
+
     if flags["xhair_on"] then
-        local cx  = vp.X / 2
-        local cy  = vp.Y / 2
-        local sz  = flags["xhair_size"]  or 10
-        local gap = flags["xhair_gap"]   or 3
+        local cx = vp.X / 2
+        local cy = vp.Y / 2
+        local sz = flags["xhair_size"] or 10
+        local gap = flags["xhair_gap"] or 3
         local thk = flags["xhair_thick"] or 2
         local col = colors.xhair
         local function setL(l,fx,fy,tx,ty)
             l.From = Vector2.new(fx,fy); l.To = Vector2.new(tx,ty)
             l.Thickness = thk; l.Color = col; l.Visible = true
         end
-        setL(xhairLines.top,    cx,        cy-gap-sz, cx,        cy-gap   )
-        setL(xhairLines.bottom, cx,        cy+gap,    cx,        cy+gap+sz)
-        setL(xhairLines.left,   cx-gap-sz, cy,        cx-gap,    cy       )
-        setL(xhairLines.right,  cx+gap,    cy,        cx+gap+sz, cy       )
-        xhairLines.dot.Visible  = flags["xhair_dot"] == true
+        setL(xhairLines.top, cx, cy-gap-sz, cx, cy-gap )
+        setL(xhairLines.bottom, cx, cy+gap, cx, cy+gap+sz)
+        setL(xhairLines.left, cx-gap-sz, cy, cx-gap, cy )
+        setL(xhairLines.right, cx+gap, cy, cx+gap+sz, cy )
+        xhairLines.dot.Visible = flags["xhair_dot"] == true
         xhairLines.dot.Position = Vector2.new(cx, cy)
-        xhairLines.dot.Color    = col
+        xhairLines.dot.Color = col
     else
         for _, l in pairs(xhairLines) do l.Visible = false end
     end
 
-    -- Player ESP
+
     for pl, d in pairs(espObjects) do
-        local c   = pl.Character
-        local h   = c and c:FindFirstChildOfClass("Humanoid")
+        local c = pl.Character
+        local h = c and c:FindFirstChildOfClass("Humanoid")
         local hrp = c and c:FindFirstChild("HumanoidRootPart")
 
         local function hideAll()
@@ -1584,7 +1584,7 @@ RunService.RenderStepped:Connect(function()
             d.nameText.Visible = false; d.distText.Visible = false
             d.hpBG.Visible = false; d.hpBar.Visible = false; d.hpText.Visible = false
             d.tracer.Visible = false; d.snapLine.Visible = false
-            for _, l in pairs(d.corners)  do l.Visible = false end
+            for _, l in pairs(d.corners) do l.Visible = false end
             for _, l in pairs(d.skeleton) do l.Visible = false end
         end
 
@@ -1594,12 +1594,12 @@ RunService.RenderStepped:Connect(function()
         local sp, onScreen = cam:WorldToViewportPoint(hrp.Position)
         if not onScreen then hideAll(); continue end
 
-        local topSP = cam:WorldToViewportPoint(hrp.Position + Vector3.new(0,  2.8, 0))
-        local botSP = cam:WorldToViewportPoint(hrp.Position - Vector3.new(0,  2.8, 0))
-        local boxH  = math.abs(botSP.Y - topSP.Y)
-        local boxW  = boxH * 0.55
-        local bx    = sp.X - boxW / 2
-        local by    = topSP.Y
+        local topSP = cam:WorldToViewportPoint(hrp.Position + Vector3.new(0, 2.8, 0))
+        local botSP = cam:WorldToViewportPoint(hrp.Position - Vector3.new(0, 2.8, 0))
+        local boxH = math.abs(botSP.Y - topSP.Y)
+        local boxW = boxH * 0.55
+        local bx = sp.X - boxW / 2
+        local by = topSP.Y
         local style = flags["box_style"] or "Corner Box"
 
         if flags["box_esp"] then
@@ -1611,12 +1611,12 @@ RunService.RenderStepped:Connect(function()
                 d.box.Visible = false
                 local cL = math.min(boxW,boxH) * 0.28
                 local co = d.corners
-                co[1].From=Vector2.new(bx,by);          co[1].To=Vector2.new(bx+cL,by)
-                co[2].From=Vector2.new(bx,by);          co[2].To=Vector2.new(bx,by+cL)
-                co[3].From=Vector2.new(bx+boxW,by);     co[3].To=Vector2.new(bx+boxW-cL,by)
-                co[4].From=Vector2.new(bx+boxW,by);     co[4].To=Vector2.new(bx+boxW,by+cL)
-                co[5].From=Vector2.new(bx,by+boxH);     co[5].To=Vector2.new(bx+cL,by+boxH)
-                co[6].From=Vector2.new(bx,by+boxH);     co[6].To=Vector2.new(bx,by+boxH-cL)
+                co[1].From=Vector2.new(bx,by); co[1].To=Vector2.new(bx+cL,by)
+                co[2].From=Vector2.new(bx,by); co[2].To=Vector2.new(bx,by+cL)
+                co[3].From=Vector2.new(bx+boxW,by); co[3].To=Vector2.new(bx+boxW-cL,by)
+                co[4].From=Vector2.new(bx+boxW,by); co[4].To=Vector2.new(bx+boxW,by+cL)
+                co[5].From=Vector2.new(bx,by+boxH); co[5].To=Vector2.new(bx+cL,by+boxH)
+                co[6].From=Vector2.new(bx,by+boxH); co[6].To=Vector2.new(bx,by+boxH-cL)
                 co[7].From=Vector2.new(bx+boxW,by+boxH);co[7].To=Vector2.new(bx+boxW-cL,by+boxH)
                 co[8].From=Vector2.new(bx+boxW,by+boxH);co[8].To=Vector2.new(bx+boxW,by+boxH-cL)
                 for _, l in pairs(co) do l.Color = colors.box; l.Visible = true end
@@ -1647,14 +1647,14 @@ RunService.RenderStepped:Connect(function()
         else d.distText.Visible = false end
 
         if flags["hp_esp"] then
-            local pct  = math.clamp(h.Health / math.max(h.MaxHealth,1), 0, 1)
-            local hbX  = bx - 6
+            local pct = math.clamp(h.Health / math.max(h.MaxHealth,1), 0, 1)
+            local hbX = bx - 6
             local barH = boxH * pct
             d.hpBG.Size = Vector2.new(4,boxH); d.hpBG.Position = Vector2.new(hbX,by); d.hpBG.Visible = true
             d.hpBar.Size = Vector2.new(4,barH); d.hpBar.Position = Vector2.new(hbX, by+boxH-barH)
             d.hpBar.Color = flags["hp_color_gradient"]
                 and Color3.fromRGB(math.round((1-pct)*255), math.round(pct*255), 0)
-                or  Color3.fromRGB(0,255,0)
+                or Color3.fromRGB(0,255,0)
             d.hpBar.Visible = true
             if flags["hp_text"] then
                 d.hpText.Text = math.floor(h.Health)
@@ -1667,10 +1667,10 @@ RunService.RenderStepped:Connect(function()
 
         if flags["tracers_on"] then
             local origin = flags["tracer_origin"] or "Bottom"
-            local fromX  = origin == "Mouse" and mp.X or vp.X/2
-            local fromY  = origin == "Top"    and 0
+            local fromX = origin == "Mouse" and mp.X or vp.X/2
+            local fromY = origin == "Top" and 0
                         or origin == "Center" and vp.Y/2
-                        or origin == "Mouse"  and mp.Y
+                        or origin == "Mouse" and mp.Y
                         or vp.Y
             d.tracer.From = Vector2.new(fromX,fromY); d.tracer.To = Vector2.new(sp.X,sp.Y)
             d.tracer.Color = colors.tracer; d.tracer.Thickness = colors.tracerThick
@@ -1702,7 +1702,7 @@ RunService.RenderStepped:Connect(function()
         end
     end
 
-    -- Pickup ESP render pass
+
     if pickupESPEnabled.ammo or pickupESPEnabled.hp then
         refreshPickupESP()
         for obj, d in pairs(pickupESPObjects) do
@@ -1715,7 +1715,7 @@ RunService.RenderStepped:Connect(function()
                 continue
             end
 
-            -- Find a representative BasePart position for this pickup
+
             local rootPart = obj:IsA("BasePart") and obj or obj:FindFirstChildOfClass("BasePart")
             if not rootPart then continue end
 
@@ -1726,44 +1726,44 @@ RunService.RenderStepped:Connect(function()
                 continue
             end
 
-            local col      = d.color
-            local distVal  = rootPos and math.round((rootPart.Position - rootPos).Magnitude) or 0
-            local bw, bh   = 34, 34
-            local bxs      = sp.X - bw / 2
-            local bys      = sp.Y - bh / 2
-            local cLen     = 9
+            local col = d.color
+            local distVal = rootPos and math.round((rootPart.Position - rootPos).Magnitude) or 0
+            local bw, bh = 34, 34
+            local bxs = sp.X - bw / 2
+            local bys = sp.Y - bh / 2
+            local cLen = 9
 
-            -- Label
+
             d.text.Position = Vector2.new(sp.X, bys - 15)
-            d.text.Color    = col
-            d.text.Visible  = true
+            d.text.Color = col
+            d.text.Visible = true
 
-            -- Distance below
-            d.dist.Text     = distVal .. "m"
+
+            d.dist.Text = distVal .. "m"
             d.dist.Position = Vector2.new(sp.X, bys + bh + 4)
-            d.dist.Color    = Color3.fromRGB(200,200,200)
-            d.dist.Visible  = true
+            d.dist.Color = Color3.fromRGB(200,200,200)
+            d.dist.Visible = true
 
-            -- Corner bracket lines (8 lines = full corner box)
+
             local ln = d.lines
-            -- TL
-            ln[1].From=Vector2.new(bxs,      bys);      ln[1].To=Vector2.new(bxs+cLen,  bys)
-            ln[2].From=Vector2.new(bxs,      bys);      ln[2].To=Vector2.new(bxs,        bys+cLen)
-            -- TR
-            ln[3].From=Vector2.new(bxs+bw,  bys);      ln[3].To=Vector2.new(bxs+bw-cLen,bys)
-            ln[4].From=Vector2.new(bxs+bw,  bys);      ln[4].To=Vector2.new(bxs+bw,     bys+cLen)
-            -- BL
-            ln[5].From=Vector2.new(bxs,      bys+bh);  ln[5].To=Vector2.new(bxs+cLen,   bys+bh)
-            ln[6].From=Vector2.new(bxs,      bys+bh);  ln[6].To=Vector2.new(bxs,         bys+bh-cLen)
-            -- BR
-            ln[7].From=Vector2.new(bxs+bw,  bys+bh);  ln[7].To=Vector2.new(bxs+bw-cLen,bys+bh)
-            ln[8].From=Vector2.new(bxs+bw,  bys+bh);  ln[8].To=Vector2.new(bxs+bw,     bys+bh-cLen)
+
+            ln[1].From=Vector2.new(bxs, bys); ln[1].To=Vector2.new(bxs+cLen, bys)
+            ln[2].From=Vector2.new(bxs, bys); ln[2].To=Vector2.new(bxs, bys+cLen)
+
+            ln[3].From=Vector2.new(bxs+bw, bys); ln[3].To=Vector2.new(bxs+bw-cLen,bys)
+            ln[4].From=Vector2.new(bxs+bw, bys); ln[4].To=Vector2.new(bxs+bw, bys+cLen)
+
+            ln[5].From=Vector2.new(bxs, bys+bh); ln[5].To=Vector2.new(bxs+cLen, bys+bh)
+            ln[6].From=Vector2.new(bxs, bys+bh); ln[6].To=Vector2.new(bxs, bys+bh-cLen)
+
+            ln[7].From=Vector2.new(bxs+bw, bys+bh); ln[7].To=Vector2.new(bxs+bw-cLen,bys+bh)
+            ln[8].From=Vector2.new(bxs+bw, bys+bh); ln[8].To=Vector2.new(bxs+bw, bys+bh-cLen)
             for _, l in pairs(ln) do l.Color = col; l.Visible = true end
         end
     end
 end)
 
--- ====== MISC CONNECTIONS ======
+
 
 UIS.JumpRequest:Connect(function()
     if flags["inf_jump"] then
@@ -1775,7 +1775,7 @@ lp.Idled:Connect(function()
     if flags["anti_afk"] then
         local VIM = game:GetService("VirtualInputManager")
         if VIM then
-            VIM:SendKeyEvent(true,  Enum.KeyCode.ButtonB, false, game)
+            VIM:SendKeyEvent(true, Enum.KeyCode.ButtonB, false, game)
             VIM:SendKeyEvent(false, Enum.KeyCode.ButtonB, false, game)
         end
     end
@@ -1784,12 +1784,12 @@ end)
 lp.CharacterAdded:Connect(function(char)
     local h = char:WaitForChild("Humanoid")
     task.wait(0.15)
-    if flags["speed_on"]   then h.WalkSpeed = flags["walkspeed"] or 16 end
-    if flags["jump_power"] then h.JumpPower = flags["jump_power"]       end
+    if flags["speed_on"] then h.WalkSpeed = flags["walkspeed"] or 16 end
+    if flags["jump_power"] then h.JumpPower = flags["jump_power"] end
     cam.FieldOfView = flags["cam_fov"] or 70
-    if flags["fly_on"]     then h.PlatformStand = true end
+    if flags["fly_on"] then h.PlatformStand = true end
     task.wait(0.5)
-    -- Reapply chams and hitbox on respawn
+
     if flags["chams_on"] then reapplyAllChams() end
     if flags["hitbox_on"] or flags["silent_aim"] then updateAllHitboxes() end
 end)
@@ -1813,5 +1813,4 @@ Players.PlayerAdded:Connect(function(pl)
     end)
 end)
 
-print("nigga im the king")
 notifications:create_notification({name="lunar x loaded"})
