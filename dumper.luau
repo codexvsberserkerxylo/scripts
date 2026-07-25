@@ -1,5 +1,5 @@
 if type(getgenv().cfg) ~= "table" then getgenv().cfg = {} end
-local speed = 1
+local speed = 5
 if type(getgenv().cfg.speed) == "number" and getgenv().cfg.speed > 0 then
     speed = getgenv().cfg.speed
 end
