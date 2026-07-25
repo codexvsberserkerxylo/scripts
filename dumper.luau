@@ -1,3 +1,6 @@
+--getgenv().cfg.speed = 5
+--loadstring(game:HttpGet("https://raw.githubusercontent.com/codexvsberserkerxylo/scripts/refs/heads/main/dumper.luau"))()
+
 getgenv().cfg = getgenv().cfg or {}
 local speedMult = getgenv().cfg.speed or 1
 if type(speedMult) ~= "number" or speedMult <= 0 then speedMult = 1 end
