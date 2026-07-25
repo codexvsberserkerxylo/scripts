@@ -1,10 +1,6 @@
---getgenv().cfg.speed = 3.5
---getgenv().cfg.log = true -- this is prob detectable, idc
---loadstring(game:HttpGet("https://raw.githubusercontent.com/codexvsberserkerxylo/scripts/refs/heads/main/dumper.luau"))()
 getgenv().cfg = getgenv().cfg or {}
-local speed = getgenv().cfg.speed or 3
-local log = getgenv().cfg.log or false
-if type(speed) ~= "number" or speed <= 0 then speed = 3 end
+local speed = getgenv().cfg.speed or 1
+if type(speed) ~= "number" or speed <= 0 then speed = 1 end
 
 local rs = game:GetService("ReplicatedStorage")
 local players = game:GetService("Players")
@@ -19,59 +15,6 @@ local lsb = 0
 local cbytes = 0
 local stopped = false
 local lyield = os.clock()
-local rlog = {}
-
-local function fmta(args)
-    local p = {}
-    for _, v in ipairs(args) do
-        local s, r = pcall(function()
-            if typeof(v) == "Instance" then
-                return v:GetFullName()
-            else
-                return tostring(v)
-            end
-        end)
-        table.insert(p, s and r or "err")
-    end
-    return table.concat(p, ", ")
-end
-
-local function slog(remote, args)
-    local ps, p = pcall(function() return remote:GetFullName() end)
-    local cs, c = pcall(function() return remote.ClassName end)
-    table.insert(rlog, (ps and p or "locked") .. " (" .. (cs and c or "locked") .. ") args: [" .. fmta(args) .. "]")
-end
-
-if log then
-    local old_nc
-    old_nc = hookmetamethod(game, "__namecall", function(self, ...)
-        local m = getnamecallmethod()
-        if m == "FireServer" or m == "InvokeServer" then
-            slog(self, {...})
-        end
-        return old_nc(self, ...)
-    end)
-
-    local old_fs = hookfunction(Instance.new("RemoteEvent").FireServer, function(self, ...)
-        slog(self, {...})
-        return old_fs(self, ...)
-    end)
-
-    local old_is = hookfunction(Instance.new("RemoteFunction").InvokeServer, function(self, ...)
-        slog(self, {...})
-        return old_is(self, ...)
-    end)
-
-    local old_fb = hookfunction(Instance.new("BindableEvent").Fire, function(self, ...)
-        slog(self, {...})
-        return old_fb(self, ...)
-    end)
-
-    local old_ib = hookfunction(Instance.new("BindableFunction").Invoke, function(self, ...)
-        slog(self, {...})
-        return old_ib(self, ...)
-    end)
-end
 
 local sg = Instance.new("ScreenGui")
 sg.Name = "dumpr"
@@ -316,20 +259,25 @@ local function mods(inst)
     local fs, fn = pcall(function() return inst:GetFullName() end)
     ct = (fs and fn or "locked")
     
-    local ms, ismod = pcall(function() return inst:IsA("ModuleScript") end)
+    local ms, ismod = pcall(function() return inst:IsA("ModuleScript") or inst:IsA("LocalScript") or inst:IsA("Script") end)
     if ms and ismod then
         local ns, n = pcall(function() return inst.Name end)
         add("-- " .. string.lower(ns and n or "locked") .. " source")
         
         local s, r = pcall(function()
-            if decompile then
-                return decompile(inst)
-            end
-            return inst.Source
+            local src = inst.Source
+            if src and #src > 0 then return src end
+            if decompile then return decompile(inst) end
+            return ""
         end)
         
         if s and type(r) == "string" and r ~= "" then
-            add(r)
+            local clean = r:gsub("%-%-[^\n]*", ""):gsub("%s+", "")
+            if clean ~= "returnnil;" and #clean > 0 then
+                add(r)
+            else
+                add("error: source inaccessible")
+            end
         else
             add("error: source inaccessible")
         end
@@ -405,13 +353,6 @@ pcall(function()
         vals(lps)
     end)
 end)
-
-if log and #rlog > 0 then
-    add("\n-- remotes")
-    for _, l in ipairs(rlog) do
-        add(l)
-    end
-end
 
 if stopped then
     title.Text = "stopped"
