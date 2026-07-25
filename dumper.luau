@@ -1,6 +1,8 @@
-getgenv().cfg = getgenv().cfg or {}
-local speed = getgenv().cfg.speed or 1
-if type(speed) ~= "number" or speed <= 0 then speed = 1 end
+if type(getgenv().cfg) ~= "table" then getgenv().cfg = {} end
+local speed = 1
+if type(getgenv().cfg.speed) == "number" and getgenv().cfg.speed > 0 then
+    speed = getgenv().cfg.speed
+end
 
 local rs = game:GetService("ReplicatedStorage")
 local players = game:GetService("Players")
