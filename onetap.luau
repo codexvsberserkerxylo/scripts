@@ -1,18 +1,25 @@
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 --[[
-    hey: 
-    
-    - made by: .weound (nick)
-    - written by one person (nick)
-    
-    stealing this and throwing your name on it doesnt make you tuff (obviously)
-    if you use any logic or functions from this, give actual credit
-    im expecting to see atleast 5 scripts that are completely skidded from this in the next 5 days :heart:
---]]
+    Lunar X
+    Copyright (c) 2026 nick (.weound)
 
--- js insert the tired emoji here
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+--]]
 
 if getgenv().library then
     if type(getgenv().library.unload) == "function" then
@@ -59,31 +66,6 @@ local MainGamePackets = require(rs.Common.Packets.MainGamePackets)
 local WeaponClient = require(lp.PlayerScripts.Start.Game.WeaponClient)
 local ViewmodelClient = require(lp.PlayerScripts.Start.Game.ViewmodelClient)
 local ByteNetReliable = rs:WaitForChild('ByteNetReliable')
-
-local TableManager = require(rs.Common.Managers.UtilityManagers.TableManager)
-local origLazyLoad = TableManager.lazyLoadModule
-TableManager.lazyLoadModule = function(name, tbl, parent)
-    if type(name) == "buffer" then name = tostring(name) end
-    if flags["kill_effect_skin"] and flags["kill_effect_skin"] ~= "" and type(name) == "string" and name:sub(1, 1) == "_" then
-        name = "_" .. flags["kill_effect_skin"]
-    end
-    return origLazyLoad(name, tbl, parent)
-end
-
-local killEffects = {}
-pcall(function()
-    local KillEffectClientModule = lp.PlayerScripts.Start.Game:FindFirstChild("KillEffectClient")
-    if KillEffectClientModule then
-        local effectsFolder = KillEffectClientModule:FindFirstChild("KillEffects")
-        if effectsFolder then
-            for _, v in ipairs(effectsFolder:GetChildren()) do
-                local name = string.gsub(v.Name, "^_", "")
-                if name ~= "" then table.insert(killEffects, name) end
-            end
-        end
-    end
-end)
-table.sort(killEffects)
 
 local function getChar() return lp.Character end
 local function getHum() local c = getChar(); return c and c:FindFirstChildOfClass("Humanoid") end
@@ -132,7 +114,6 @@ local keybinds = { aim = false, trigger = false }
 local ws_enabled = false
 local jp_enabled = false
 local currTarget = nil
-local auth = 0 --
 local conns = {}
 local function connect(sig, cb) 
     local c = sig:Connect(cb)
@@ -199,47 +180,22 @@ oldIndex = hookmetamethod(game, "__index", newcclosure(function(self, key)
     return oldIndex(self, key)
 end))
 
-local lastHitTime = 0
-local lastHitChar = nil
-
 local old
 old = hookmetamethod(game, '__namecall', newcclosure(function(self, ...)
     if getnamecallmethod() == 'FireServer' and self == ByteNetReliable and currTarget then
         local args = {...}
 
         if typeof(args[2]) == 'table' and typeof(args[2][1]) == 'Instance' then
-            args[2][1] = currTarget
-            args[2][2] = currTarget.Head
+            local hitchance = flags["silent_hitchance"] or 100
+            if math.random(1, 100) <= hitchance then
+                args[2][1] = currTarget
+                args[2][2] = currTarget.Head
+            end
         end
-    end
-
-	if flags["hit_notifs"] or flags["hit_tracers"] then
-        lastHitTime = tick()
-        lastHitChar = currTarget
     end
 
     return old(self, ...)
 end))
-
-connect(run.Heartbeat, function()
-    if lastHitChar and tick() - lastHitTime < 0.1 then
-        local hitChar = lastHitChar
-        lastHitChar = nil
-        
-        if flags["hit_notifs"] then
-            local plr = plrs:GetPlayerFromCharacter(hitChar)
-            library:notification({text = "hit that bitch "..(plr and plr.Name or hitChar.Name).." for 100 in the head"})
-        end
-        if flags["hit_tracers"] then
-            local from2D, vis1 = cam:WorldToViewportPoint(cam.CFrame.Position)
-            local to2D, vis2 = cam:WorldToViewportPoint(hitChar.Head.Position)
-            if vis1 and vis2 then
-                local tracer = newDraw("Line", {Thickness = 1, Color = hitTracerColor, From = Vector2.new(from2D.X, from2D.Y), To = Vector2.new(to2D.X, to2D.Y), Visible = true})
-                table.insert(hitTracers, {tracer = tracer, time = tick()})
-            end
-        end
-    end
-end)
 
 local function apply_walkspeed(state, speed)
     ws_enabled = state
@@ -512,15 +468,32 @@ radarCenter.BorderSizePixel = 0
 Instance.new("UICorner", radarCenter).CornerRadius = UDim.new(1, 0)
 
 local radarDots = {}
+local radarDotColor = rgb(255, 0, 0) -- triple t
 
 local auraPart = Instance.new("Part")
 auraPart.Anchored = true
 auraPart.CanCollide = false
 auraPart.Transparency = 0.5
 auraPart.Material = Enum.Material.Neon
-auraPart.Shape = Enum.PartType.Cylinder
-auraPart.Size = Vector3.new(0.1, 50, 50)
+auraPart.Size = Vector3.new(1, 1, 1)
 auraPart.Parent = nil
+
+local auraMesh = Instance.new("SpecialMesh", auraPart)
+auraMesh.MeshType = Enum.MeshType.Brick
+
+local function setAuraShape(shape)
+    auraMesh.MeshId = ""
+    if shape == "Circle" then
+        auraMesh.MeshType = Enum.MeshType.Sphere
+    elseif shape == "Cube" then
+        auraMesh.MeshType = Enum.MeshType.Brick
+    elseif shape == "Cylinder" then
+        auraMesh.MeshType = Enum.MeshType.Cylinder
+    elseif shape == "Diamond" then
+        auraMesh.MeshType = Enum.MeshType.FileMesh
+        auraMesh.MeshId = "rbxassetid://9756362"
+    end
+end
 
 local window = library:window({ name = "lunar x | one tap", size = UDim2.fromOffset(580, 600) })
 
@@ -535,22 +508,22 @@ local aimbotSec = aimbotTab:section({ name = "aimbot", side = "left" })
 local silentSec = aimbotTab:section({ name = "silent aim", side = "left" })
 local aimCfg = aimbotTab:section({ name = "config", side = "left" })
 local fovSec = aimbotTab:section({ name = "fov circle", side = "right" })
-local auraSec = aimbotTab:section({ name = "aura & hits", side = "right" })
+local auraSec = aimbotTab:section({ name = "aura", side = "right" })
 
 aimbotSec:toggle({ name = "Aimbot", flag = "aim_on", default = false })
 aimbotSec:keybind({ name = "Aimbot Bind", flag = "aim_key", default = Enum.KeyCode.E, mode = "hold", callback = function(v) keybinds.aim = v end })
 aimbotSec:toggle({ name = "Wall Check", flag = "aim_wall_check", default = true })
 aimbotSec:toggle({ name = "Trigger Bot", flag = "triggerbot", default = false })
 aimbotSec:keybind({ name = "Trigger Bind", flag = "trigger_key", default = Enum.KeyCode.Q, mode = "hold", callback = function(v) keybinds.trigger = v end })
-aimbotSec:toggle({ name = "Auto Shoot", flag = "auto_shoot", default = false })
+aimbotSec:toggle({ name = "Auto Shoot", flag = "auto_shoott", default = false })
 aimbotSec:slider({ name = "Auto Shoot Delay", flag = "auto_shoot_delay", min = 0.01, max = 1, default = 0.05, interval = 0.01, suffix = "s" })
 
 silentSec:toggle({ name = "Silent Aim", flag = "silent_aim", default = false })
+silentSec:slider({ name = "Hit Chance", flag = "silent_hitchance", min = 1, max = 100, default = 100, interval = 1, suffix = "%" })
 silentSec:toggle({ name = "Wall Check", flag = "silent_wall_check", default = true })
 silentSec:toggle({ name = "Wallbang", flag = "wallbang", default = false })
 silentSec:toggle({ name = "Inf Distance", flag = "inf_distance", default = false })
 silentSec:slider({ name = "Silent Aim Radius", flag = "silent_radius", min = 10, max = 1000, default = 150, interval = 5, suffix = "px" })
-silentSec:toggle({ name = "Hit Notifications", flag = "hit_notifs", default = true })
 
 aimCfg:dropdown({ name = "Target Part", flag = "aim_part", items = {"Head", "HumanoidRootPart", "UpperTorso", "LowerTorso"}, default = "Head" })
 aimCfg:slider({ name = "Smoothness", flag = "aim_smooth", min = 0.01, max = 1, default = 0.15, interval = 0.01, suffix = "x" })
@@ -563,10 +536,7 @@ fovSec:colorpicker({ name = "FOV Color", flag = "fov_color", color = fov_color, 
     if fovCircle then fovCircle.Color = c end
 end})
 fovSec:slider({ name = "Radius", flag = "aim_radius", min = 10, max = 1000, default = 150, interval = 5, suffix = "px", callback = function(v) if fovCircle then fovCircle.Radius = v end end })
--- yo if anyone sees this
---- 1. this aint your script son
----- 2. stop tryna act tuff pls
------ 3. credit me if u use funcs from this
+
 auraSec:toggle({ name = "Kill Aura", flag = "kill_aura", default = false, callback = setKillAura })
 auraSec:slider({ name = "Kill Aura Range", flag = "kill_aura_range", min = 10, max = 500, default = 50, interval = 10, suffix = " st" })
 auraSec:toggle({ name = "Hitbox Expander", flag = "hitbox_on", default = false })
@@ -616,11 +586,8 @@ tracerSec:dropdown({ name = "Destination", flag = "tracer_dest", items = {"Head"
 chamsSec:toggle({ name = "Chams", flag = "chams_on", default = false })
 chamsSec:colorpicker({ name = "Chams Color", flag = "chams_color", color = chams_color, alpha = 0, callback = function(c) chams_color = c end })
 
-fxSec:toggle({ name = "Hit Tracers", flag = "hit_tracers", default = true })
-fxSec:colorpicker({ name = "Hit Tracer Color", flag = "hit_tracer_color", color = hitTracerColor, alpha = 0, callback = function(c) hitTracerColor = c end })
-fxSec:slider({ name = "Tracer Fade Time", flag = "tracer_fade", min = 0.5, max = 5, default = 2, interval = 0.1, suffix = "s" })
-
 fxSec:toggle({ name = "Kill Aura Visualizer", flag = "aura_vis", default = false })
+fxSec:dropdown({ name = "Aura Shape", flag = "aura_vis_shape", items = {"Circle", "Cube", "Cylinder", "Diamond"}, default = "Cylinder", callback = function(v) setAuraShape(v) end })
 fxSec:colorpicker({ name = "Aura Vis Color", flag = "aura_vis_color", color = aura_vis_color, alpha = 0, callback = function(c) aura_vis_color = c end })
 fxSec:slider({ name = "Aura Transparency", flag = "aura_vis_trans", min = 0, max = 1, default = 0.5, interval = 0.1 })
 fxSec:dropdown({ name = "Aura Material", flag = "aura_vis_mat", items = materials, default = "Neon" })
@@ -699,10 +666,6 @@ envSec:slider({ name = "Time of Day", flag = "env_time", min = 0, max = 24, defa
 envSec:slider({ name = "Fog End", flag = "env_fogend", min = 0, max = 100000, default = 100000, interval = 1000, callback = function(v) light.FogEnd = v end })
 envSec:slider({ name = "Fog Start", flag = "env_fogstart", min = 0, max = 100000, default = 0, interval = 1000, callback = function(v) light.FogStart = v end })
 envSec:colorpicker({ name = "Fog Color", flag = "fog_color", color = rgb(128, 128, 128), alpha = 0, callback = function(c) light.FogColor = c end })
--- yo if anyone sees this
---- 1. this aint your script son
----- 2. stop tryna act tuff pls
------ 3. credit me if u use funcs from this
 envSec:slider({ name = "Atmosphere Density", flag = "atm_density", min = 0, max = 1, default = 0.3, interval = 0.01, callback = function(v) atmosphere.Density = v end })
 envSec:slider({ name = "Atmosphere Glare", flag = "atm_glare", min = 0, max = 1, default = 0, interval = 0.01, callback = function(v) atmosphere.Glare = v end })
 envSec:slider({ name = "Atmosphere Haze", flag = "atm_haze", min = 0, max = 1, default = 0, interval = 0.01, callback = function(v) atmosphere.Haze = v end })
@@ -727,6 +690,58 @@ xhairSec:slider({ name = "Gap", flag = "xhair_gap", min = 0, max = 15, default =
 xhairSec:toggle({ name = "Center Dot", flag = "xhair_dot", default = true })
 xhairSec:colorpicker({ name = "Color", flag = "xhair_color", color = xhair_color, alpha = 0, callback = function(c) xhair_color = c; for _, l in pairs(xhairLines) do if l then l.Color = c end end end })
 
+local xphooked = false
+
+local function hookmaxxp()
+    if xphooked then return end
+    
+    if WeaponPackets.useWeapon and WeaponPackets.useWeapon.send then
+        local origsendd = WeaponPackets.useWeapon.send
+        WeaponPackets.useWeapon.send = function(data)
+            if flags["max_xp"] then
+                data.was360 = true
+                data.quickscope = true
+            end
+            return origsendd(data)
+        end
+        xphooked = true
+        return
+    end
+
+    local firefunc = WeaponClient.fire
+    if not firefunc then return end
+    
+    local success, u26 = pcall(debug.getupvalue, firefunc, 1)
+    if not success or type(u26) ~= "function" then return end
+    
+    for i = 1, 30 do
+        local ok, val = pcall(debug.getupvalue, u26, i)
+        if not ok then break end
+        if type(val) == "table" and type(val.send) == "function" and type(val.listen) == "function" then
+            local origss = val.send
+            val.send = function(data)
+                if flags["max_xp"] then
+                    data.was360 = true
+                    data.quickscope = true
+					data.midair = true
+                end
+                return origss(data)
+            end
+            xphooked = true
+            break
+        end
+    end
+end
+
+hookmaxxp()
+
+local origvalues = WeaponClient.__setValues
+WeaponClient.__setValues = function(self, key)
+    local res = origvalues(self, key)
+    hookmaxxp()
+    return res
+end
+
 local weaponMainSec = weaponTab:section({ name = "weapon mods", side = "left" })
 weaponMainSec:toggle({ name = "Inf Fire Rate", flag = "no_shoot_delay", default = false, callback = applyWeaponMods })
 weaponMainSec:toggle({ name = "No Recoil", flag = "no_recoil", default = false, callback = function(v)
@@ -738,9 +753,7 @@ weaponMainSec:toggle({ name = "No Recoil", flag = "no_recoil", default = false, 
 end})
 weaponMainSec:toggle({ name = "Instant Reload", flag = "instant_reload", default = false, callback = applyWeaponMods })
 weaponMainSec:toggle({ name = "Infinite Ammo", flag = "inf_ammo", default = false, callback = applyWeaponMods })
-weaponMainSec:toggle({ name = "Auto Clicker", flag = "auto_clicker", default = false })
-weaponMainSec:keybind({ name = "Auto Clicker Bind", flag = "auto_clicker_key", default = Enum.KeyCode.B, mode = "toggle", callback = function(v) flags["auto_clicker"] = v end })
-weaponMainSec:slider({ name = "Auto Clicker Speed", flag = "auto_clicker_speed", min = 1, max = 50, default = 10, interval = 1, suffix = " cps" })
+weaponMainSec:toggle({ name = "Max XP", flag = "max_xp", default = false })
 
 local weaponSkinSec = skinsTab:section({ name = "weapons", side = "left" })
 local weaponDrop = weaponSkinSec:dropdown({ name = "Select Weapon Skin", flag = "ot_weapon_skin", items = weaponSkins, default = "" })
@@ -749,7 +762,7 @@ weaponSkinSec:textbox({ flag = "search_weapon", placeholder = "search...", callb
     for _, item in ipairs(weaponSkins) do if string.find(string.lower(item), string.lower(text)) then table.insert(filtered, item) end end
     weaponDrop:refresh_options(filtered)
 end })
-weaponSkinSec:button({ name = "Apply", callback = function()
+weaponSkinSec:button({ name = "apply", callback = function()
     library:notification({text = "applied: "..flags["ot_weapon_skin"]})
 end})
 
@@ -760,22 +773,14 @@ knifeSkinSec:textbox({ flag = "search_knife", placeholder = "search...", callbac
     for _, item in ipairs(knifeSkins) do if string.find(string.lower(item), string.lower(text)) then table.insert(filtered, item) end end
     knifeDrop:refresh_options(filtered)
 end })
-knifeSkinSec:button({ name = "Apply", callback = function()
+knifeSkinSec:button({ name = "apply", callback = function()
     library:notification({text = "applied: "..flags["ot_knife_skin"]})
 end})
-
-local killEffectSkinSec = skinsTab:section({ name = "kill effects", side = "left" })
-local killEffectDrop = killEffectSkinSec:dropdown({ name = "Select Kill Effect", flag = "kill_effect_skin", items = killEffects, default = "" })
-killEffectSkinSec:textbox({ flag = "search_effect", placeholder = "search...", callback = function(text)
-    local filtered = {}
-    for _, item in ipairs(killEffects) do if string.find(string.lower(item), string.lower(text)) then table.insert(filtered, item) end end
-    killEffectDrop:refresh_options(filtered)
-end })
 
 local miscSec = miscTab:section({ name = "local player", side = "left" })
 local moveSec = miscTab:section({ name = "movement", side = "left" })
 local radarSec = miscTab:section({ name = "radar", side = "left" })
-local serverSec = miscTab:section({ name = "server", side = "left" })
+local serverSec = miscTab:section({ name = "server", side = "right" })
 
 miscSec:toggle({ name = "Anti-AFK", flag = "anti_afk", default = false })
 miscSec:toggle({ name = "Noclip", flag = "noclip_on", default = false })
@@ -783,10 +788,26 @@ miscSec:toggle({ name = "Auto Deploy", flag = "auto_deploy", default = false, ca
     if v then
 		while v do 
 			MainGamePackets.deploy.send()
-			task.wait(2)
+			task.wait(1)
 		end
 	end
 end})
+miscSec:toggle({ name = "Auto Respawn", flag = "auto_respawn", default = false, callback = function(v)
+    if v then
+        task.spawn(function()
+            while flags["auto_respawn"] do
+                local c = lp.Character
+                local h = c and c:FindFirstChildOfClass("Humanoid")
+                if h and h.Health <= 0 then
+                    pcall(function() MainGamePackets.respawn.send(true) end)
+                end
+                task.wait(1.5) -- dont change this or else it will bug out np
+            end
+        end)
+    end
+end})
+miscSec:toggle({ name = "Auto Equip Weapon", flag = "auto_equip", default = false })
+miscSec:dropdown({ name = "Equip Weapon", flag = "auto_equip_weapon", items = {"Primary", "Secondary", "Knife"}, default = "Primary" })
 local tpConn
 miscSec:toggle({ name = "Third Person", flag = "third_person", default = false, callback = function(v)
     if v then
@@ -804,10 +825,6 @@ miscSec:toggle({ name = "Third Person", flag = "third_person", default = false, 
 end})
 miscSec:toggle({ name = "Spin Bot", flag = "spin_on", default = false })
 miscSec:slider({ name = "Spin Speed", flag = "spin_speed", min = 10, max = 10000, default = 180, interval = 10, suffix = " deg/s" })
--- yo if anyone sees this
---- 1. this aint your script son
----- 2. stop tryna act tuff pls
------ 3. credit me if u use funcs from this
 moveSec:toggle({ name = "Speed Hack", flag = "speed_on", default = false, callback = function(v) apply_walkspeed(v, flags["walkspeed"] or 50) end })
 moveSec:dropdown({ name = "Speed Method", flag = "speed_method", items = {"WalkSpeed", "CFrame", "Velocity"}, default = "WalkSpeed" })
 moveSec:slider({ name = "WalkSpeed", flag = "walkspeed", min = 16, max = 500, default = 50, interval = 1, suffix = " ws" })
@@ -816,10 +833,24 @@ moveSec:dropdown({ name = "Jump Method", flag = "jump_method", items = {"JumpPow
 moveSec:slider({ name = "JumpPower", flag = "jump_power", min = 50, max = 500, default = 50, interval = 1, suffix = " jp" })
 
 radarSec:toggle({ name = "Player Radar", flag = "radar_on", default = false, callback = function(v) radarGui.Enabled = v end })
-radarSec:slider({ name = "Radar Size", flag = "radar_size", min = 50, max = 300, default = 150, interval = 10, callback = function(v) radarFrame.Size = UDim2.new(0, v, 0, v) end })
+radarSec:slider({ name = "Radar Size", flag = "radar_size", min = 50, max = 500, default = 150, interval = 10, callback = function(v) radarFrame.Size = UDim2.new(0, v, 0, v) end })
 radarSec:slider({ name = "Radar Range", flag = "radar_range", min = 100, max = 2000, default = 500, interval = 50, suffix = " st" })
+radarSec:slider({ name = "Radar X", flag = "radar_x", min = 0, max = 1920, default = 15, interval = 1, callback = function(v) radarFrame.Position = UDim2.new(0, v, 0, flags["radar_y"] or 15) end })
+radarSec:slider({ name = "Radar Y", flag = "radar_y", min = 0, max = 1080, default = 15, interval = 1, callback = function(v) radarFrame.Position = UDim2.new(0, flags["radar_x"] or 15, 0, v) end })
+radarSec:colorpicker({ name = "Radar Color", flag = "radar_color", color = radarDotColor, alpha = 0, callback = function(c) radarDotColor = c end })
 
-serverSec:button({ name = "Copy Server ID", callback = function() pcall(function() setclipboard(game.JobId) end) end })
+serverSec:button({ name = "Copy j*b ID", callback = function() pcall(function() setclipboard(game.JobId) end) end })
+serverSec:textbox({ name = "j*b ID", flag = "j*b_id_input", placeholder = "Enter j*b Id" })
+serverSec:button({ name = "Join Server", callback = function()
+    local id = flags["j*b_id_input"]
+    if id and id ~= "" then
+        pcall(function()
+            game:GetService("TeleportService"):TeleportToPlaceInstance(game.PlaceId, id, lp)
+        end)
+    else
+        library:notification({text = "pls enter a valid j*b Id"})
+    end
+end })
 serverSec:button({ name = "Server hop", callback = function() game:GetService("TeleportService"):Teleport(game.PlaceId, lp) end })
 
 local cfgSec = settingsTab:section({ name = "configs", side = "left" })
@@ -828,16 +859,6 @@ local uiSec = settingsTab:section({ name = "ui", side = "right" })
 local dir = library.directory .. "/configs/"
 if not isfolder(library.directory) then makefolder(library.directory) end
 if not isfolder(dir) then makefolder(dir) end
---[[
-    hey skid:
-    
-    - made by: .weound (nick)
-    - written by one singular person (nick)
-    
-    stealing this and throwing your name on it doesnt make you a dev (obviously)
-    if you use any logic or functions from this, give actual credit
-    im expecting to see atleast 5 scripts that are completely skidded from this in the next 5 days :heart:
---]]
 library.config_holder = cfgSec:dropdown({ name = "Configs", flag = "config_name_list", items = {}, default = "" })
 cfgSec:textbox({ name = "Config Name", flag = "config_name_text_box", placeholder = "config name" })
 
@@ -845,6 +866,25 @@ cfgSec:button({ name = "Create", callback = function() local name = flags["confi
 cfgSec:button({ name = "Load", callback = function() local name = flags["config_name_list"]; if name and name ~= "" and isfile(dir .. name .. ".cfg") then library:load_config(readfile(dir .. name .. ".cfg")); library:notification({text = "Loaded config: "..name}) end end })
 cfgSec:button({ name = "Save", callback = function() local name = flags["config_name_list"] or flags["config_name_text_box"]; if name and name ~= "" then writefile(dir .. name .. ".cfg", library:get_config()); library:config_list_update(); library:notification({text = "Saved config: "..name}) end end })
 cfgSec:button({ name = "Delete", callback = function() local name = flags["config_name_list"]; if name and name ~= "" and isfile(dir .. name .. ".cfg") then delfile(dir .. name .. ".cfg"); library:config_list_update() end end })
+cfgSec:button({ name = "Set Auto Load", callback = function() 
+    local name = flags["config_name_list"]
+    if name and name ~= "" then
+        writefile(library.directory .. "/autoload.cfg", name)
+        library:notification({text = "Set autoload to: "..name})
+    else
+        library:notification({text = "Select a config first"})
+    end
+end })
+
+cfgSec:button({ name = "Stop Auto Load", callback = function()
+    local p = library.directory .. "/autoload.cfg"
+    if isfile(p) then
+        delfile(p)
+        library:notification({text = "Stopped auto loading"})
+    else
+        library:notification({text = "No autoload set"})
+    end
+end })
 library:config_list_update()
 
 uiSec:toggle({ name = "Keybind List", flag = "ui_keybind_list", default = false, callback = function(v) window.toggle_list(v) end })
@@ -906,21 +946,6 @@ connect(uis.InputBegan, function(input, gpe)
 end)
 connect(uis.InputEnded, function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then isFiring = false end
-end)
-
-task.spawn(function()
-    while true do
-        if flags["auto_clicker"] then
-            local cps = flags["auto_clicker_speed"] or 10
-            local delay = 1 / cps
-            VIM:SendMouseButtonEvent(cam.ViewportSize.X/2, cam.ViewportSize.Y/2, 0, true, game, 0)
-            task.wait(delay / 2)
-            VIM:SendMouseButtonEvent(cam.ViewportSize.X/2, cam.ViewportSize.Y/2, 0, false, game, 0)
-            task.wait(delay / 2)
-        else
-            task.wait(1)
-        end
-    end
 end)
 
 connect(run.Heartbeat, function(dt)
@@ -1019,7 +1044,7 @@ connect(run.RenderStepped, function(dt)
         mouse1press(); task.wait(0.02); mouse1release(); triggerCooldown = tick()
     end
 
-    if flags["auto_shoot"] and tick() - autoShootCooldown > (flags["auto_shoot_delay"] or 0.05) then
+    if flags["auto_shoott"] and tick() - autoShootCooldown > (flags["auto_shoot_delay"] or 0.05) then
         pcall(function() WeaponClient.fire() end)
         autoShootCooldown = tick()
     end
@@ -1111,11 +1136,6 @@ connect(run.RenderStepped, function(dt)
         dangerIndicators = {}
     end
 
--- yo if anyone sees this
---- 1. this aint your script son
----- 2. stop tryna act tuff pls
------ 3. credit me if u use funcs from this
-
     if flags["aura_vis"] and killAuraActive then
         local char = getChar()
         if char then
@@ -1127,10 +1147,17 @@ connect(run.RenderStepped, function(dt)
                 
                 local range = flags["kill_aura_range"] or 50
                 local thick = flags["aura_vis_thick"] or 0.1
-                auraPart.Size = Vector3.new(thick, range*2, range*2)
-                
                 local offset = Vector3.new(flags["aura_vis_x"] or 0, flags["aura_vis_y"] or 0, 0)
-                auraPart.CFrame = CFrame.new(p.Position + offset) * CFrame.Angles(0, 0, math.rad(90))
+                local curShape = flags["aura_vis_shape"] or "Circle"
+                
+                if curShape == "Cylinder" then
+                    auraMesh.Scale = Vector3.new(thick, range*2, range*2)
+                    auraPart.CFrame = CFrame.new(p.Position + offset) * CFrame.Angles(0, 0, math.rad(90))
+                else
+                    auraMesh.Scale = Vector3.new(range*2, range*2, range*2)
+                    auraPart.CFrame = CFrame.new(p.Position + offset)
+                end
+                
                 auraPart.Parent = ws
             else
                 auraPart.Parent = nil
@@ -1281,17 +1308,21 @@ connect(run.RenderStepped, function(dt)
             if d.tracer then d.tracer.Visible = false end 
         end
     end
+
+	if flags["auto_equip"] then
+        local c = getChar()
+        if c and c:GetAttribute("deployed") then
+            local cw = c:GetAttribute("currentWeapon")
+            local tw = flags["auto_equip_weapon"] or "Primary"
+            if cw ~= tw then
+                local idx = 1
+                if tw == "Secondary" then idx = 2 elseif tw == "Knife" then idx = 3 end
+                pcall(function() WeaponClient.setWeapon(idx) end)
+            end
+        end
+    end
 end)
---[[
-    hey skid:
-    
-    - made by: .weound (nick)
-    - written by one singular person (nick)
-    
-    stealing this and throwing your name on it doesnt make you a dev (obviously)
-    if you use any logic or functions from this, give actual credit
-    im expecting to see atleast 5 scripts that are completely skidded from this in the next 5 days :heart:
---]]
+
 print("e")
 connect(run.Heartbeat, function()
     local rootPos = getRoot() and getRoot().Position
@@ -1306,10 +1337,10 @@ connect(run.Heartbeat, function()
                     if not radarDots[char] then
                         radarDots[char] = Instance.new("Frame", radarFrame)
                         radarDots[char].Size = UDim2.new(0, 4, 0, 4)
-                        radarDots[char].BackgroundColor3 = Color3.new(1, 0, 0)
                         radarDots[char].BorderColor3 = Color3.new(0, 0, 0)
                         Instance.new("UICorner", radarDots[char]).CornerRadius = UDim.new(1, 0)
                     end
+                    radarDots[char].BackgroundColor3 = radarDotColor
                     local scale = (flags["radar_size"] or 150) / 2
                     radarDots[char].Position = UDim2.new(0.5, relPos.X / (flags["radar_range"] or 500) * scale, 0.5, relPos.Z / (flags["radar_range"] or 500) * scale)
                 else
@@ -1341,10 +1372,7 @@ connect(lp.Idled, function()
         end
     end
 end)
--- yo if anyone sees this
---- 1. this aint your script son
----- 2. stop tryna act tuff pls
------ 3. credit me if u use funcs from this
+
 task.spawn(function()
     task.wait(1)
     if isfile(library.directory .. "/silentload.cfg") then
@@ -1363,14 +1391,14 @@ task.spawn(function()
         end
     end
 end)
-print("lwk what the fuck is 19429138-35.5+19238490")
--- 1: 2?
--- 2: 3?
--- 3: 4?
--- 4: 5?
--- 5: 6?
--- 6: 7?
--- 7: 8?
--- 8: 9?
--- 9: 10?
--- 10: 11?
+
+uiSec:slider({
+    name = "Colorpicker Anim Speed",
+    flag = "color_picker_anim_speed",
+    min = 0,
+    max = 5,
+    default = 2,
+    interval = 0.01
+})
+
+aimbotTab.open_tab()
