@@ -1,18 +1,25 @@
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-
 --[[
-    hey: 
-    
-    - made by: .weound (nick)
-    - written by one person (nick)
-    
-    stealing this and throwing your name on it doesnt make you tuff (obviously)
-    if you use any logic or functions from this, give actual credit
-    im expecting to see atleast 5 scripts that are completely skidded from this in the next 5 days :heart:
---]]
+    Lunar X
+    Copyright (c) 2026 nick (.weound)
 
--- js insert the tired emoji here
--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+    of this software and associated documentation files (the "Software"), to deal
+    in the Software without restriction, including without limitation the rights
+    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    copies of the Software, and to permit persons to whom the Software is
+    furnished to do so, subject to the following conditions:
+
+    The above copyright notice and this permission notice shall be included in all
+    copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    SOFTWARE.
+--]]
 
 -- "i need to make this open source or else it would lag so fuck you obfuscators" - nick 2026
 
@@ -1864,3 +1871,14 @@ task.spawn(function()
         end
     end
 end)
+
+uiSec:slider({
+    name = "Colorpicker Anim Speed",
+    flag = "color_picker_anim_speed",
+    min = 0,
+    max = 5,
+    default = 2,
+    interval = 0.01
+})
+
+aimbotTab.open_tab()
