@@ -25,6 +25,7 @@
 
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/i77lhm/vaderpaste/refs/heads/main/library.lua"))()
 local flags = library.flags
+library.directory = "LunarX-ar"
 
 function library:config_list_update()
     if not library.config_holder then return end
