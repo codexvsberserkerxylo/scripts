@@ -1,4 +1,8 @@
-
+--[[
+    Lunar X
+    Copyright (c) 2026 nick (.weound)
+    Licensed under the Non-Commercial Share-Alike License (see LICENSE in the repo root).
+--]]
 
 if getgenv().library then
     if type(getgenv().library.unload) == "function" then
