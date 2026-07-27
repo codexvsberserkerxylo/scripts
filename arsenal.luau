@@ -2,15 +2,17 @@
     Lunar X
     Copyright (c) 2026 nick (.weound)
 
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
+    This software is provided free of charge for non-commercial use only. 
+    You are permitted to use, copy, modify, and distribute this software, 
+    subject to the following conditions:
 
-    The above copyright notice and this permission notice shall be included in all
-    copies or substantial portions of the Software.
+    1. Non-Commercial Restriction: You may not sell, rent, lease, monetize, 
+       or use this software or any derivative works for commercial purposes.
+    2. Open Source Share-Alike: Any modified versions, extensions, or derivative 
+       works of this software must also be made freely available under this 
+       exact same license.
+    3. Attribution: The above copyright notice and this permission notice 
+       shall be included in all copies or substantial portions of the Software.
 
     THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
     IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
