@@ -1,29 +1,8 @@
 --[[
     Lunar X
     Copyright (c) 2026 nick (.weound)
-
-    This software is provided free of charge for non-commercial use only. 
-    You are permitted to use, copy, modify, and distribute this software, 
-    subject to the following conditions:
-
-    1. Non-Commercial Restriction: You may not sell, rent, lease, monetize, 
-       or use this software or any derivative works for commercial purposes.
-    2. Open Source Share-Alike: Any modified versions, extensions, or derivative 
-       works of this software must also be made freely available under this 
-       exact same license.
-    3. Attribution: The above copyright notice and this permission notice 
-       shall be included in all copies or substantial portions of the Software.
-
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-    SOFTWARE.
+    Licensed under the Non-Commercial Share-Alike License (see LICENSE in the repo root).
 --]]
-
--- "i need to make this open source or else it would lag so fuck you obfuscators" - nick 2026
 
 local library = loadstring(game:HttpGet("https://raw.githubusercontent.com/i77lhm/vaderpaste/refs/heads/main/library.lua"))()
 local flags = library.flags
