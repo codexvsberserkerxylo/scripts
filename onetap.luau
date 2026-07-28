@@ -39,12 +39,16 @@ local rs = game:GetService("ReplicatedStorage")
 local VIM = game:GetService("VirtualInputManager")
 
 local lp = plrs.LocalPlayer
+local pgui = lp:FindFirstChild("PlayerGui")
 local cam = ws.CurrentCamera
 local mouse = lp:GetMouse()
 
 local WeaponManager = require(rs.Common.Managers.WeaponManager)
 local WeaponPackets = require(rs.Common.Packets.WeaponPackets)
 local ModelsManager = require(rs.Common.Managers.ModelsManager)
+local QuestPackets = require(rs.Common.Packets.QuestPackets)
+local LevelRewardPackets = require(rs.Common.Packets.LevelRewardPackets)
+local DataClient = require(lp.PlayerScripts.Start.Backend.DataClient)
 local MainGamePackets = require(rs.Common.Packets.MainGamePackets)
 local WeaponClient = require(lp.PlayerScripts.Start.Game.WeaponClient)
 local ViewmodelClient = require(lp.PlayerScripts.Start.Game.ViewmodelClient)
@@ -362,22 +366,26 @@ local function destroyESP(char)
     espObjects[char] = nil
 end
 
+local function rng()
+   return math.random(1, 967676767)
+end
+
 local function applyChams(char)
     if not char or not char.Parent then return end
     if not flags["chams_on"] then
-        if char:FindFirstChild("LunarCham") then char.LunarCham:Destroy() end
+        if char:FindFirstChild("oikwerwe") then char.oikwerwe:Destroy() end
         return
     end
     
-    if not char:FindFirstChild("LunarCham") then
+    if not char:FindFirstChild("oikwerwe") then
         local h = Instance.new("Highlight")
-        h.Name = "LunarCham"
+        h.Name = "oikwerwe"
         h.FillColor = chams_color
         h.OutlineColor = Color3.new(1, 1, 1)
         h.Parent = char
     end
     
-    local c = char.LunarCham
+    local c = char.oikwerwe
     c.FillColor = chams_color
     c.FillTransparency = 0.5
     c.OutlineTransparency = 0
@@ -424,6 +432,30 @@ local function applyVMChams()
     end
 end
 
+local menuopened = false
+local mousewaslocked = false
+
+local function fuckmouselock(visible)
+    if visible and not menuopened then
+        menuopened = true
+        if uis.MouseBehavior == Enum.MouseBehavior.LockCenter or uis.MouseBehavior == Enum.MouseBehavior.LockCurrentPosition then
+            mousewaslocked = true
+        else
+            mousewaslocked = false
+        end
+    elseif not visible and menuopened then
+        menuopened = false
+        if mousewaslocked then
+            uis.MouseBehavior = Enum.MouseBehavior.LockCenter
+            mousewaslocked = false
+        end
+    end
+
+    if visible and uis.MouseBehavior ~= Enum.MouseBehavior.Default then
+        uis.MouseBehavior = Enum.MouseBehavior.Default
+    end
+end
+
 local weaponSkins, knifeSkins = {}, {}
 for k, v in pairs(WeaponManager.getWeapons()) do table.insert(weaponSkins, k) end
 for k, v in pairs(WeaponManager.getKnives()) do table.insert(knifeSkins, k) end
@@ -431,8 +463,8 @@ table.sort(weaponSkins)
 table.sort(knifeSkins)
 
 local radarGui = Instance.new("ScreenGui")
-radarGui.Name = "LunarRadar"
-radarGui.Parent = game:GetService("CoreGui")
+radarGui.Name = math.random(1, 967676767)
+radarGui.Parent = gethui()
 radarGui.Enabled = false
 
 local radarFrame = Instance.new("Frame", radarGui)
@@ -454,6 +486,7 @@ local radarDots = {}
 local radarDotColor = rgb(255, 0, 0) -- triple t
 
 local auraPart = Instance.new("Part")
+auraPart.Name = math.random(1, 967676767)
 auraPart.Anchored = true
 auraPart.CanCollide = false
 auraPart.Transparency = 0.5
@@ -583,14 +616,14 @@ fxSec:toggle({ name = "Danger Indicators", flag = "danger_indicators", default =
 fxSec:colorpicker({ name = "Danger Color", flag = "danger_color", color = danger_color, alpha = 0, callback = function(c) danger_color = c end })
 
 local atmosphere = light:FindFirstChildOfClass("Atmosphere") or Instance.new("Atmosphere")
-atmosphere.Name = "LunarAtmosphere"
+atmosphere.Name = rng()
 atmosphere.Parent = light
 
 local function getCC()
-    local cc = light:FindFirstChild("LunarCC")
+    local cc = light:FindFirstChild("lccc")
     if not cc then
         cc = Instance.new("ColorCorrectionEffect")
-        cc.Name = "LunarCC"
+        cc.Name = "lccc"
         cc.Parent = light
     end
     return cc
@@ -667,6 +700,7 @@ local xhairLines = {
     right = newDraw("Line", {Thickness = 2, Visible = false, Color = xhair_color}),
     dot = newDraw("Circle", {Radius = 2, Filled = true, Visible = false, Color = xhair_color})
 }
+
 xhairSec:toggle({ name = "Crosshair", flag = "xhair_on", default = false, callback = function(v) if not v then for _, l in pairs(xhairLines) do if l then l.Visible = false end end end end })
 xhairSec:slider({ name = "Size", flag = "xhair_size", min = 2, max = 30, default = 10, interval = 1, suffix = "px" })
 xhairSec:slider({ name = "Gap", flag = "xhair_gap", min = 0, max = 15, default = 3, interval = 1, suffix = "px" })
@@ -684,6 +718,7 @@ local function hookmaxxp()
             if flags["max_xp"] then
                 data.was360 = true
                 data.quickscope = true
+				data.scoped = true
             end
             return origsendd(data)
         end
@@ -779,16 +814,22 @@ miscSec:toggle({ name = "Auto Respawn", flag = "auto_respawn", default = false, 
     if v then
         task.spawn(function()
             while flags["auto_respawn"] do
-                local c = lp.Character
-                local h = c and c:FindFirstChildOfClass("Humanoid")
-                if h and h.Health <= 0 then
-                    pcall(function() MainGamePackets.respawn.send(true) end)
-                end
-                task.wait(1.5) -- dont change this or else it will bug out np
+				if pgui:FindFirstChild("Game Interface"):FindFirstChild("Deathscreen").Visible == true then
+					task.wait(0.2)
+					MainGamePackets.respawn.send(true)
+				end
+
+                if pgui:FindFirstChild("Game Interface"):FindFirstChild("Level Up").Visible == true then -- or LevelUp ig
+					task.wait(0.2)
+					MainGamePackets.respawn.send(true)
+				end
+
+				task.wait(0.1)
             end
         end)
     end
 end})
+
 miscSec:toggle({ name = "Auto Equip Weapon", flag = "auto_equip", default = false })
 miscSec:dropdown({ name = "Equip Weapon", flag = "auto_equip_weapon", items = {"Primary", "Secondary", "Knife"}, default = "Primary" })
 local tpConn
@@ -808,7 +849,7 @@ miscSec:toggle({ name = "Third Person", flag = "third_person", default = false, 
 end})
 miscSec:toggle({ name = "Spin Bot", flag = "spin_on", default = false })
 miscSec:slider({ name = "Spin Speed", flag = "spin_speed", min = 10, max = 10000, default = 180, interval = 10, suffix = " deg/s" })
-moveSec:toggle({ name = "Speed Hack", flag = "speed_on", default = false, callback = function(v) apply_walkspeed(v, flags["walkspeed"] or 50) end })
+moveSec:toggle({ name = "Speed Hack", flag = "speed_onnn", default = false, callback = function(v) apply_walkspeed(v, flags["walkspeed"] or 50) end })
 moveSec:dropdown({ name = "Speed Method", flag = "speed_method", items = {"WalkSpeed", "CFrame", "Velocity"}, default = "WalkSpeed" })
 moveSec:slider({ name = "WalkSpeed", flag = "walkspeed", min = 16, max = 500, default = 50, interval = 1, suffix = " ws" })
 moveSec:toggle({ name = "Jump Hack", flag = "jump_on", default = false, callback = function(v) apply_jumppower(v, flags["jump_power"] or 50) end })
@@ -869,13 +910,20 @@ cfgSec:button({ name = "Stop Auto Load", callback = function()
     end
 end })
 library:config_list_update()
-
+local cursorline = newDraw("Quad", {Thickness = 0, Filled = true, Visible = false, Color = Color3.new(0, 0, 0)})
+local cursor = newDraw("Quad", {Thickness = 0, Filled = true, Visible = false, Color = rgb(100, 100, 255)})
 uiSec:toggle({ name = "Keybind List", flag = "ui_keybind_list", default = false, callback = function(v) window.toggle_list(v) end })
 uiSec:toggle({ name = "Player List", flag = "ui_player_list", default = false, callback = function(v) window.toggle_playerlist(v) end })
-uiSec:keybind({ name = "Menu Toggle", flag = "menu_key", default = Enum.KeyCode.RightControl, callback = function(v) window.set_menu_visibility(v) end })
+local menuVisible = true
+uiSec:keybind({ name = "Menu Toggle", flag = "menu_key", default = Enum.KeyCode.RightControl, callback = function(v) 
+    menuVisible = v 
+    window.set_menu_visibility(v) 
+end })
 uiSec:colorpicker({ name = "Accent Color", flag = "accent_color", color = rgb(100, 100, 255), alpha = 0, callback = function(c) library:update_theme("accent", c) end })
+uiSec:toggle({ name = "Custom Cursor", flag = "custom_cursor", default = false })
+uiSec:dropdown({ name = "Cursor Mode", flag = "cursor_mode", items = {"Menu Opened", "Menu Closed", "Always"}, default = "Menu Opened" })
 
-local function safe_unload()
+local function tungtungtungsahurnick()
     if library and type(library.unload) == "function" then library:unload()
     else if library and library.gui then library.gui:Destroy() end; getgenv().library = nil end
 end
@@ -884,11 +932,14 @@ uiSec:button({ name = "Unload", callback = function()
     disconnect_all()
     for char, _ in pairs(espObjects) do destroyESP(char) end
     if fovCircle then fovCircle:Remove() end
+    if cursor then cursor:Remove() end
+    if cursorline then cursorline:Remove() end
     for _, l in pairs(xhairLines) do if l then l:Remove() end end
     for _, t in ipairs(hitTracers) do if t.tracer then t.tracer:Remove() end end
     radarGui:Destroy()
     auraPart:Destroy()
     
+    uis.MouseIconEnabled = true
     hookmetamethod(game, "__namecall", old)
     hookmetamethod(game, "__index", oldIndex)
     
@@ -896,7 +947,6 @@ uiSec:button({ name = "Unload", callback = function()
     ModelsManager.getKnifeModel = origGetKnifeModel
     ViewmodelClient.shoot = origVMShoot
     WeaponClient.scope = origScope
-    TableManager.lazyLoadModule = origLazyLoad
     
     applyWeaponMods()
     flags["no_shoot_delay"] = false
@@ -904,7 +954,7 @@ uiSec:button({ name = "Unload", callback = function()
     flags["inf_ammo"] = false
     applyWeaponMods()
 
-    safe_unload()
+    tungtungtungsahurnick()
 end})
 
 local isFiring = false
@@ -1016,7 +1066,59 @@ connect(run.RenderStepped, function(dt)
         currTarget = nil
     end
 
+	fuckmouselock(menuVisible)
+
     applyVMChams()
+
+    local showcursor = false
+    if flags["custom_cursor"] then
+        if flags["cursor_mode"] == "Always" then
+            showcursor = true
+        elseif flags["cursor_mode"] == "Menu Opened" and menuVisible then
+            showcursor = true
+        elseif flags["cursor_mode"] == "Menu Closed" and not menuVisible then
+            showcursor = true
+        end
+    end
+
+    local c = getChar()
+    local deployed = c and c:GetAttribute("deployed")
+
+    if showcursor then
+        local mp = uis:GetMouseLocation()
+        
+        uis.MouseIconEnabled = false
+        cursor.Visible = true
+        cursorline.Visible = true
+        
+        local accentc = rgb(100, 100, 255)
+        if flags["accent_color"] and typeof(flags["accent_color"]) == "table" and flags["accent_color"].Color then
+            accentc = flags["accent_color"].Color
+        elseif flags["accent_color"] and typeof(flags["accent_color"]) == "Color3" then
+            accentc = flags["accent_color"]
+        end
+        
+        cursor.Color = accentc
+        
+        cursorline.PointA = Vector2.new(mp.X - 1, mp.Y - 1)
+        cursorline.PointB = Vector2.new(mp.X + 5, mp.Y + 21)
+        cursorline.PointC = Vector2.new(mp.X + 19, mp.Y + 13)
+        cursorline.PointD = cursorline.PointC
+        
+        cursor.PointA = Vector2.new(mp.X, mp.Y)
+        cursor.PointB = Vector2.new(mp.X + 3, mp.Y + 20)
+        cursor.PointC = Vector2.new(mp.X + 17, mp.Y + 12)
+        cursor.PointD = cursor.PointC
+    else
+        cursor.Visible = false
+        cursorline.Visible = false
+        
+        if menuVisible then
+            uis.MouseIconEnabled = true
+        else
+            uis.MouseIconEnabled = not deployed
+        end
+    end
 
     if flags["aim_on"] and keybinds.aim and state.aim_target_part then
         local smooth = flags["aim_smooth"] or 0.15
