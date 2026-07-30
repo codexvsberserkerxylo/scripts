@@ -1023,7 +1023,7 @@ misc_sec:slider({ name = "Spin Speed", flag = "spin_speed", min = 10, max = 1000
 misc_sec:toggle({ name = "Custom Kill Feed", flag = "custom_kill_feed", default = false })
 misc_sec:textbox({ name = "Kill Feed Text", flag = "kill_feed_text", placeholder = "Text", default = "", callback = function(text) ckf_txt = text end })
 misc_sec:toggle({ name = "Hit Notifications", flag = "hit_notifs", default = false })
-misc_sec:textbox({ name = "Hit Notif Message", flag = "hit_notif_msg", placeholder = "hit (target) for (hp) in (part)", default = "hit that cutie (target) for (hp) in the (part)!" })
+misc_sec:textbox({ name = "Hit Notif Message", flag = "hit_notif_msg", placeholder = "hit (target) for (hp) in (part)", default = "hit (target) for (hp) in the (part)!" })
 
 misc_sec:toggle({ name = "Auto Collect Quests", flag = "auto_quests", default = false, callback = function(v)
     if v then
