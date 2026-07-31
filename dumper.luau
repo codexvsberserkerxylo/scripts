@@ -276,6 +276,18 @@ local function mods(inst)
         if s and type(r) == "string" and r ~= "" then
             local clean = r:gsub("%-%-[^\n]*", ""):gsub("%s+", "")
             if clean ~= "returnnil;" and #clean > 0 then
+                local pos = 1
+                for i = 1, 4000 do -- truncation
+                    local npos = string.find(r, "\n", pos, true)
+                    if not npos then
+                        pos = nil
+                        break
+                    end
+                    pos = npos + 1
+                end
+                if pos and pos <= #r then
+                    r = string.sub(r, 1, pos - 1) .. "[truncated]"
+                end
                 add(r)
             else
                 add("error: source inaccessible")
